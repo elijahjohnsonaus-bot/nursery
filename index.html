@@ -1420,15 +1420,18 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
 
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
-    var hdrs = { 'x-pip-pass': settings.pip.pass || '' };
+    // With no passcode no custom header is sent, which keeps the request "simple" and skips the browser's pre-check.
+    var hdrs = {};
+    if (settings.pip.pass) hdrs['x-pip-pass'] = settings.pip.pass;
     var opts = { cache: 'no-store', headers: hdrs, signal: ctrl ? ctrl.signal : undefined };
     if (out.length) {
       opts.method = 'POST';
-      hdrs['content-type'] = 'application/json';
+      hdrs['content-type'] = settings.pip.pass ? 'application/json' : 'text/plain;charset=UTF-8';   // Pip reads the body as JSON either way
       opts.body = JSON.stringify({ since: pip.cursor, entries: out });
     }
     pip.inflight = fetch(origin + '/api/sync' + (out.length ? '' : '?since=' + pip.cursor), opts).then(function (r) {
       clearTimeout(timer);
+      pip.code = r.status;
       if (r.status === 401) { pip.status = 'pass'; return null; }
       if (r.status === 404) { pip.status = 'address'; return null; }
       if (!r.ok) { pip.status = 'error'; return null; }
@@ -1465,9 +1468,13 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
       if (pip.seenRun !== undefined && run && run.id !== pip.seenRun && settings.pip.auto &&
           modeNow(new Date()) === 'night' && !Feed.on && !Light.on && !openOverlay && !Log.on) Feed.open();
       pip.seenRun = run ? run.id : null;
-    }).catch(function () {
+    }).catch(function (e) {
       clearTimeout(timer);
-      pip.status = 'offline';
+      pip.status = 'offline'; pip.code = 0;
+      if (e && e.name === 'AbortError') return;
+      // A request the browser doesn't police (no-cors) tells "can't connect at all" apart from
+      // "Pip answered but the browser won't let this page read the answer".
+      return fetch(origin + '/api/sync?health=1', { mode: 'no-cors', cache: 'no-store' }).then(function () { pip.status = 'blocked'; }, function () { /* really offline */ });
     }).then(function () {
       pip.busy = false;
       pipStore();
@@ -1521,6 +1528,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
     var ms = now.getTime(), st = pip.status;
     if (st === 'pass') return { msg: 'Passcode doesn’t match', sub: 'Check it in Settings' };
     if (st === 'address') return { msg: 'Can’t find Pip there', sub: 'Check the address in Settings' };
+    if (st === 'blocked') return { msg: 'Pip won’t let this screen in', sub: 'Open Settings, Pip for details' };
     if (!pip.at) return st === 'idle' ? { msg: 'Connecting to Pip', sub: '' } : { msg: 'Can’t reach Pip', sub: 'Check the Echo is on Wi-Fi' };
     var s = pipStats(ms), stale = ms - pip.at > 5 * MIN, tail = stale ? ', out of date' : '', wait = 0;
     Object.keys(pip.outbox).forEach(function (id) { var o = pip.entries[id]; if (o && ms - (o.updated || ms) > 20000) wait++; });
@@ -2058,8 +2066,9 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
     else if (pip.status === 'ok') t = 'Connected. Last updated ' + clockText(new Date(pip.at)) + '.';
     else if (pip.status === 'pass') t = 'The passcode doesn’t match the one in Pip.';
     else if (pip.status === 'address') t = 'No Pip found at that address.';
-    else if (pip.status === 'offline') t = 'Can’t reach Pip. Check the Wi-Fi.';
-    else if (pip.status === 'error') t = 'That address answered, but it doesn’t look like Pip. Check it.';
+    else if (pip.status === 'offline') t = 'Can’t reach Pip. Check the Echo is on Wi-Fi and the address is spelled right.';
+    else if (pip.status === 'blocked') t = 'Pip is there, but the browser blocked this page from reading its answer. Pip’s site probably needs redeploying from GitHub so it accepts other sites.';
+    else if (pip.status === 'error') t = 'That address answered' + (pip.code ? ' (error ' + pip.code + ')' : '') + ', but it doesn’t look like Pip. Check the address.';
     else t = 'Connecting…';
     setText(el.pipStatus, t);
   }
