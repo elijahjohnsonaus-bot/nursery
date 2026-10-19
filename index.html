@@ -2409,6 +2409,17 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     return Cal.inflight;
   }
 
+  // What to do about a calendar link that can't be read, in plain words.
+  function calHint(code) {
+    var link = ' In Google, use the Secret address in iCal format (it ends in basic.ics). In Apple Calendar, use the Public Calendar link.';
+    if (code === 'wrong-link') return ' That link opens the calendar web page, not the calendar itself.' + link;
+    if (code === 'not-a-calendar') return ' That link didn’t give a calendar file.' + link;
+    if (code === 'http-404' || code === 'http-410' || code === 'http-403') return ' That link wasn’t found. It may have been reset, or sharing was switched off.';
+    if (code === 'unreachable' || code === 'timeout') return ' The calendar didn’t answer. It will try again.';
+    if (code === 'too-big') return ' That calendar is too big to read.';
+    return '';
+  }
+
   function calStatusText() {
     var st = Cal.status;
     if (st === 'nopass') return famNoText();
@@ -2419,8 +2430,8 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     if (st === 'error') return 'The server gave an unexpected answer' + (Cal.code ? ' (error ' + Cal.code + ')' : '') + '.';
     if (st === 'offline') return 'Can’t reach the server.' + (Cal.at ? ' Showing the calendar as it was at ' + clockText(new Date(Cal.at)) + '.' : '');
     if (st === 'ok') {
-      var bad = (Cal.data.feeds || []).filter(function (f) { return !f.ok; }).map(function (f) { return f.name + ' can’t be read (' + f.error + ')'; });
-      return 'Updated ' + clockText(new Date(Cal.at)) + '.' + (bad.length ? ' ' + bad.join('. ') + '.' : '');
+      var bad = (Cal.data.feeds || []).filter(function (f) { return !f.ok; }).map(function (f) { return f.name + ' can’t be read (' + f.error + ').' + calHint(f.error); });
+      return 'Updated ' + clockText(new Date(Cal.at)) + '.' + (bad.length ? ' ' + bad.join(' ') : '');
     }
     return Cal.at ? 'Updated ' + clockText(new Date(Cal.at)) + '.' : 'Loading…';
   }

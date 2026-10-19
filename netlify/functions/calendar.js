@@ -39,7 +39,15 @@ function feeds() {
   return out;
 }
 
+// Google's calendar page links (calendar/u/0?cid=..., calendar/embed?src=..., calendar/r?cid=...) open a
+// web page, not a calendar. The calendar file is the "Secret address in iCal format", under /calendar/ical/.
+function isGooglePageLink(link) {
+  const u = new URL(link);
+  return /(^|\.)google\.com$/i.test(u.hostname) && /^\/calendar(\/|$)/i.test(u.pathname) && !/\/ical\//i.test(u.pathname);
+}
+
 async function readFeed(feed, win) {
+  if (isGooglePageLink(feed.url)) throw Object.assign(new Error('page'), { code: 'wrong-link' });
   const res = await fetch(feed.url, { signal: AbortSignal.timeout(8000), headers: { 'user-agent': 'nursery-screen' } });
   if (!res.ok) throw Object.assign(new Error('http'), { code: 'http-' + res.status });
   const text = await res.text();
