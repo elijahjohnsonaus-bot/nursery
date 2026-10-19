@@ -34,8 +34,12 @@
   page link), so they never sit in this file or in the public repo. They are kept in a private Netlify store
   (the Pip passcode only if the site is locked with NURSERY_PASSCODE).
   Night feed: a dim red screen with the time since the last feed and big buttons, for 3 am.
+  Pages: the screen opens on Home (clock, weather, family calendar, photos, the baby at a glance). Swipe
+  left for the nursery screen (temperature and sleeping bag). The night look always opens on the nursery
+  screen, and the day look comes back to Home when the screen has been left alone for a couple of minutes.
   Family (needs shared settings, so the screen has the nursery passcode): the next two weeks of the
-  family's Apple Calendars, one colour per person, and a photo frame slideshow. The calendar links live
+  family's calendars, one colour per person, and a photo frame slideshow that starts by itself after the
+  screen has been left alone (Settings, Photo frame). The calendar links live
   in the CALENDAR_FEEDS variable in Netlify (see netlify/functions/calendar.js). Photos are added from
   /photos.html and kept in a private Netlify Blobs store.
   /test.html checks the Echo's speaker, microphone, camera and screen.
@@ -75,7 +79,7 @@ body.night :focus-visible{outline-color:var(--amber)}
 
 /* ---------- main screen ---------- */
 .stage{
-  position:fixed; top:0; right:0; bottom:0; left:0;
+  position:absolute; top:0; right:0; bottom:0; left:0;
   display:grid; padding:4vmin 5.5vmin 3.6vmin;
   grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);
   grid-template-rows:auto minmax(0,1fr) auto auto;
@@ -343,6 +347,72 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
 .frame-note{position:absolute; left:0; right:0; bottom:0; margin:0; padding:2.4vmin 4vmin; text-align:center; font-size:3.4vmin; color:#fff; background:rgba(0,0,0,.55)}
 .frame-note:empty{display:none}
 
+/* ---------- pages: swipe between Home and the nursery screen ---------- */
+.pager{position:fixed; top:0; right:0; bottom:0; left:0; display:flex; overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain; scrollbar-width:none}
+.pager::-webkit-scrollbar{display:none}
+.page{position:relative; flex:0 0 100%; width:100%; height:100%; overflow:hidden; scroll-snap-align:start; scroll-snap-stop:always}
+.dots{position:fixed; left:0; right:0; bottom:.8vmin; z-index:6; display:flex; justify-content:center; pointer-events:none}
+.dots .dot{position:relative; width:1.7vmin; height:1.7vmin; margin:0 1.1vmin; padding:0; border:0; border-radius:50%; background:var(--ink-soft); opacity:.28; pointer-events:auto}
+.dots .dot::before{content:""; position:absolute; top:-2.2vmin; right:-1.5vmin; bottom:-2.2vmin; left:-1.5vmin}
+.dots .dot.on{opacity:.85}
+body.night .dots .dot{background:var(--amber-dim)}
+
+/* ---------- Home: the clock, what is coming up, the photos and the baby at a glance ---------- */
+.home{position:absolute; top:0; right:0; bottom:0; left:0; display:grid; padding:4vmin 5.5vmin 4.6vmin; row-gap:2.4vmin;
+  grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr) auto}
+.h-top{display:flex; align-items:baseline; justify-content:space-between; min-height:8vmin}
+.h-when{display:flex; align-items:baseline; min-width:0}
+.h-clock{font-size:9vmin; font-weight:500; line-height:1; white-space:nowrap}
+.h-date{font-size:3.4vmin; color:var(--ink-soft); margin-left:2.6vmin}
+.h-wx{font-size:3.2vmin; color:var(--ink-soft); text-align:right; margin-left:3vmin}
+.h-wx b{font-size:1.5em; font-weight:500; color:var(--ink); margin-right:1.2vmin}
+.h-main{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); column-gap:4vmin; min-height:0}
+.h-cal{min-height:0; overflow:hidden}
+.h-head{font-size:2.6vmin; color:var(--ink-soft); margin-bottom:1.2vmin}
+.h-note{font-size:3vmin; line-height:1.35; color:var(--ink-soft)}
+.h-cal .cal-day{font-size:3vmin; margin:2.2vmin 0 1vmin}
+.h-cal .cal-day:first-of-type{margin-top:0}
+.h-cal .cal-ev{margin-bottom:1vmin}
+.h-cal .cal-t{width:19vmin; font-size:2.7vmin; padding:1.1vmin 1.4vmin}
+.h-cal .cal-t small{font-size:2.1vmin}
+.h-cal .cal-b{padding:1vmin 1.6vmin 1vmin 0}
+.h-cal .cal-b b{font-size:3vmin; line-height:1.2}
+.h-cal .cal-b small{font-size:2.3vmin}
+.h-cal .cal-none{font-size:2.8vmin; margin-bottom:1vmin}
+.h-more{font-size:2.5vmin; color:var(--ink-soft); margin-top:.6vmin}
+.h-photo{position:relative; min-height:0; overflow:hidden; border-radius:2.2vmin; background:var(--panel); border:.25vmin solid var(--line); cursor:pointer}
+.h-photo .frame-note{font-size:2.6vmin; padding:1.4vmin 2.4vmin}
+.h-empty{position:absolute; top:0; right:0; bottom:0; left:0; display:flex; align-items:center; justify-content:center; padding:4vmin; text-align:center; font-size:3vmin; line-height:1.35; color:var(--ink-soft)}
+.h-empty:empty{display:none}
+.h-photo.has .h-empty{display:none}
+.h-pip{display:none}
+body.has-pip .h-pip{display:flex}
+.h-pip .item.main{flex:1.6 1 0}
+.h-pip .v.big{font-size:5.4vmin; font-weight:600; line-height:1.05; margin-top:.3vmin}
+.h-pip .item.msg .v.big{font-size:3.6vmin; line-height:1.2}
+.h-pip.stale .item:not(.main) .v{opacity:.55}
+body.night .home, body.night .h-clock{color:var(--amber)}
+body.night .h-date, body.night .h-wx, body.night .h-head, body.night .h-note, body.night .h-more, body.night .h-empty{color:var(--amber-dim)}
+body.night .h-wx b{color:var(--amber)}
+body.night .h-photo{display:none}
+body.night .h-main{grid-template-columns:minmax(0,1fr)}
+body.night .dots .dot{opacity:.16}
+body.night .dots .dot.on{opacity:.45}
+
+@media (max-aspect-ratio: 1/1){
+  .page{overflow-y:auto; overflow-x:hidden}
+  .home{position:relative; min-height:100%; grid-template-rows:auto auto auto; align-content:start; padding:6vmin 6vmin 9vmin; row-gap:5vmin}
+  .h-top{flex-wrap:wrap}
+  .h-clock{font-size:15vmin} .h-date{font-size:4.6vmin} .h-wx{font-size:4.4vmin; width:100%; text-align:left; margin:1.6vmin 0 0}
+  .h-main{grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto; row-gap:5vmin}
+  .h-photo{height:62vmin; order:-1}
+  .h-head{font-size:3.8vmin} .h-note{font-size:4.2vmin}
+  .h-cal .cal-day{font-size:4.6vmin} .h-cal .cal-t{width:27vmin; font-size:4vmin} .h-cal .cal-t small{font-size:3.2vmin}
+  .h-cal .cal-b b{font-size:4.6vmin} .h-cal .cal-b small{font-size:3.6vmin} .h-cal .cal-none{font-size:4.2vmin} .h-more{font-size:3.6vmin}
+  .h-photo .frame-note{font-size:3.6vmin} .h-empty{font-size:4.4vmin}
+  .dots{bottom:1.2vmin} .dots .dot{width:2.4vmin; height:2.4vmin}
+  .h-pip .item.main{flex:1 1 100%} .h-pip .v.big{font-size:10vmin} .h-pip .item.msg .v.big{font-size:6vmin}
+}
 /* ---------- phone or other tall screens ---------- */
 @media (max-aspect-ratio: 1/1){
   body{overflow:auto}
@@ -387,6 +457,31 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
 </style>
 </head>
 <body class="zone-none blank">
+<div class="pager" id="pager">
+<section class="page" id="pageHome" aria-label="Home">
+  <div class="home" id="home">
+    <header class="h-top">
+      <p class="h-when"><span class="h-clock" id="hClock"></span><span class="h-date" id="hDate"></span></p>
+      <p class="h-wx" id="hWx"></p>
+    </header>
+    <div class="h-main">
+      <section class="h-cal" id="hCal" aria-label="Coming up"></section>
+      <section class="h-photo" id="hPhoto" aria-label="Photos">
+        <div class="slide"><div class="bg"></div><img alt=""></div>
+        <div class="slide"><div class="bg"></div><img alt=""></div>
+        <p class="h-empty" id="hEmpty"></p>
+        <p class="frame-note"></p>
+      </section>
+    </div>
+    <section class="today h-pip" id="hPip" aria-label="Baby">
+      <div class="item main" id="hp-main"><p class="k" id="hp-k">Since last feed</p><p class="v big" id="hp-v"></p><p class="s" id="hp-s"></p></div>
+      <div class="item" id="hp-i2"><p class="k" id="hp-k2">Next side</p><p class="v" id="hp-v2"></p><p class="s" id="hp-s2"></p></div>
+      <div class="item" id="hp-i3"><p class="k">Last 24 hours</p><p class="v" id="hp-v3"></p><p class="s" id="hp-s3"></p></div>
+      <div class="item" id="hp-i4"><p class="k" id="hp-k4">Sleep</p><p class="v" id="hp-v4"></p><p class="s" id="hp-s4"></p></div>
+    </section>
+  </div>
+</section>
+<section class="page" id="pageNursery" aria-label="Nursery">
 <main class="stage" id="stage">
   <header class="top">
     <p><span class="clock" id="clock"></span><span class="date" id="date"></span></p>
@@ -438,6 +533,9 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
 
   <p class="tip" id="tip"></p>
 </main>
+</section>
+</div>
+<div class="dots" id="dots"></div>
 
 <nav class="controls" id="controls" aria-label="Controls">
   <button class="btn" data-act="log" id="logBtn" hidden>Log</button>
@@ -601,6 +699,18 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
       <div class="row"><span class="lbl">From</span><input type="time" id="nightFrom" aria-label="Night look starts"><span class="lbl">until</span><input type="time" id="nightTo" aria-label="Night look ends"></div>
     </div>
 
+    <div class="set">
+      <h3>Photo frame</h3>
+      <div class="row" id="frameChips">
+        <button class="chip" data-frame-idle="2">After 2 min</button>
+        <button class="chip" data-frame-idle="5">After 5 min</button>
+        <button class="chip" data-frame-idle="10">After 10 min</button>
+        <button class="chip" data-frame-idle="30">After 30 min</button>
+        <button class="chip" data-frame-idle="0">Never</button>
+      </div>
+      <p class="hint">The photos shuffle on their own once nobody has touched the screen for this long. Only in the day look, and not while a sound, the night light or a screen is open. Touch the screen to go back. Add photos on the <a href="photos.html">photos page</a>. This is the same on every screen.</p>
+    </div>
+
     <div class="set" id="testSet">
       <h3>Hardware test</h3>
       <p class="hint">Checks this Echo&rsquo;s speaker, microphone, camera and screen. Useful before adding voice features.</p>
@@ -615,7 +725,7 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
 (function () {
   'use strict';
 
-  var VERSION = '19 Oct 2026, v6';
+  var VERSION = '19 Oct 2026, v7';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -660,6 +770,7 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     bags: { '0.2': true, '1.0': true, '2.5': true, '3.5': true },
     sound: { type: 'brown', volume: 30, timer: '60' },
     light: { colour: 'amber', level: 45, off: '30' },
+    frameIdle: 5,   // minutes of no touching before the photo frame starts by itself (0 for never)
     pip: { host: '', pass: '', dob: '', auto: false, log: true, by: 'Nursery screen' }
   };
   function withDefaults(s) {
@@ -683,6 +794,7 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
   // One-time setup link: page address followed by #key=NURSERY_PASSCODE (turns on shared settings) and/or
   // #pip=ADDRESS&pass=PASSCODE&dob=YYYY-MM-DD. A # part is never sent to the server, and it is removed
   // from the address once saved.
+  var START_HASH = String(location.hash || '');   // kept, because the setup part is cleared from the address below
   (function () {
     var h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
     if (!h.has('pip') && !h.has('key')) return;
@@ -712,7 +824,9 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     logBtn: $('logBtn'), log: $('log'), lgBody: $('lg-body'), lgSync: $('lg-sync'), logToast: $('logToast'),
     syncPass: $('syncPass'), syncStatus: $('syncStatus'),
     family: $('family'), calList: $('calList'), calLegend: $('calLegend'), calStatus: $('calStatus'), famMsg: $('famMsg'),
-    frame: $('frame'), fNote: $('fNote'), familyBtn: $('familyBtn')
+    frame: $('frame'), fNote: $('fNote'), familyBtn: $('familyBtn'),
+    pager: $('pager'), dots: $('dots'), home: $('home'), hClock: $('hClock'), hDate: $('hDate'), hWx: $('hWx'),
+    hCal: $('hCal'), hPhoto: $('hPhoto'), hEmpty: $('hEmpty'), hPip: $('hPip')
   };
 
   // ---------- data ----------
@@ -1059,11 +1173,14 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     var now = new Date();
     var mode = modeNow(now);
     if (mode !== lastMode) {
+      var firstDraw = !lastMode;
       document.body.classList.toggle('night', mode === 'night');
       applyBrightness(mode);
       if (mode === 'night' && Frame && Frame.on) Frame.close();   // the photo frame gives way when the night look starts
+      if (mode === 'day') frameTouched();   // the photo frame waits its full time after the day look starts
       lastMode = mode;
       tlKey = '';
+      if (!firstDraw) Pager.go(mode === 'night' ? 1 : 0, true);   // night is the nursery screen, day is Home
     }
     setText(el.clock, clockText(now));
     setText(el.date, dateText(now) + pipAge());
@@ -1071,6 +1188,7 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     setText(el.tip, TIPS[tipIndex % TIPS.length]);
     renderPill(now);
     renderPip(now);
+    homeRender(now);
 
     var r = reading(now);
     if (!r) {
@@ -1398,6 +1516,8 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     el.nightFrom.value = settings.nightFrom; el.nightTo.value = settings.nightTo;
     var chips = el.settings.querySelectorAll('[data-bag]');
     for (var i = 0; i < chips.length; i++) chips[i].classList.toggle('on', !!settings.bags[chips[i].getAttribute('data-bag')]);
+    var fchips = el.settings.querySelectorAll('[data-frame-idle]');
+    for (var f = 0; f < fchips.length; f++) fchips[f].classList.toggle('on', +fchips[f].getAttribute('data-frame-idle') === frameMinutes());
     var out = outsideTemp();
     if (roomDraft === null && out !== null) roomDraft = Math.round((out + (settings.offset || 0)) * 2) / 2;
     setText(el.roomVal, roomDraft === null ? '--' : roomDraft.toFixed(1) + '°');
@@ -1417,6 +1537,7 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     else if (b.id === 'roomUp' && roomDraft !== null) roomDraft = Math.min(45, roomDraft + 0.5);
     else if (b.id === 'roomSave' && roomDraft !== null && out !== null) { settings.offset = Math.round((roomDraft - out) * 10) / 10; state = null; }
     else if (b.id === 'roomClear') { settings.offset = 0; roomDraft = null; state = null; }
+    else if (b.hasAttribute('data-frame-idle')) { settings.frameIdle = +b.getAttribute('data-frame-idle'); }
     else if (b.hasAttribute('data-bag')) {
       var k = b.getAttribute('data-bag'), count = 0;
       for (var x in settings.bags) if (settings.bags[x]) count++;
@@ -2195,7 +2316,7 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
   // night light and the "Logged as" name stay on each device. Each setting carries the time the server
   // last saw it change, so two devices changing different settings never overwrite each other. While the
   // site is open the Pip passcode is not stored on the server (a locked site shares it too).
-  var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'pip.host', 'pip.pass', 'pip.dob'];
+  var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'frameIdle', 'pip.host', 'pip.pass', 'pip.dob'];
   var HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
   var BAG_KEYS = ['0.2', '1.0', '2.5', '3.5'];
   function okStr(v, n) { return typeof v === 'string' && v.length <= n; }
@@ -2205,6 +2326,7 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     nightFrom: function (v) { return typeof v === 'string' && HHMM.test(v); },
     nightTo: function (v) { return typeof v === 'string' && HHMM.test(v); },
     offset: function (v) { return okNum(v, 40); },
+    frameIdle: function (v) { return [0, 2, 5, 10, 30].indexOf(v) >= 0; },
     bags: function (v) {
       if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
       var any = false;
@@ -2436,22 +2558,31 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     return Cal.at ? 'Updated ' + clockText(new Date(Cal.at)) + '.' : 'Loading…';
   }
 
-  function calRender() {
-    var st = Cal.status, d = Cal.data;
-    var hidden = st === 'nopass' || st === 'pass' || st === 'setup' || st === 'nofeeds' || st === 'missing';
-    if (hidden) d = null;
-    setText(el.calStatus, calStatusText());
-    el.calLegend.innerHTML = '';
-    el.calList.innerHTML = '';
-    if (!d) return;
-    (d.feeds || []).forEach(function (f) {
-      var k = document.createElement('span'); k.className = 'cal-key' + (f.ok ? '' : ' bad');
-      var dot = document.createElement('i'); dot.className = 'cal-dot'; if (hexOk(f.color)) dot.style.background = f.color;
-      k.appendChild(dot); k.appendChild(document.createTextNode(f.name));
-      el.calLegend.appendChild(k);
-    });
+  // One event as a row: person's colour bar, the time, the title and where.
+  function calEvent(r, day, now) {
+    var ev = document.createElement('div'); ev.className = 'cal-ev' + (!r.allDay && r.end < now.getTime() ? ' past' : '');
+    var bar = document.createElement('span'); bar.className = 'cal-bar'; if (hexOk(r.color)) bar.style.background = r.color;
+    var tm = document.createElement('span'); tm.className = 'cal-t';
+    if (r.allDay) tm.textContent = 'All day';
+    else {
+      tm.textContent = clockText(new Date(r.start));
+      if (r.end - r.start >= MIN) {
+        var u = document.createElement('small');
+        var same = startOfDay(new Date(r.end)).getTime() === day;
+        u.textContent = 'until ' + (same ? '' : dateText(new Date(r.end)) + ' ') + clockText(new Date(r.end));
+        tm.appendChild(u);
+      }
+    }
+    var body = document.createElement('span'); body.className = 'cal-b';
+    var b = document.createElement('b'); b.textContent = r.title; body.appendChild(b);
+    var s = document.createElement('small'); s.textContent = r.who + (r.where ? ' · ' + r.where.replace(/\s*\n\s*/g, ', ') : ''); body.appendChild(s);
+    ev.appendChild(bar); ev.appendChild(tm); ev.appendChild(body);
+    return ev;
+  }
 
-    var now = new Date(), today0 = startOfDay(now).getTime(), horizon = addDays(today0, 14);
+  // The events sorted into days (today first, and today is always there), for the next nDays days.
+  function calGroups(d, nDays) {
+    var now = new Date(), today0 = startOfDay(now).getTime(), horizon = addDays(today0, nDays);
     var days = {}, order = [];
     function put(day, row) { if (!days[day]) { days[day] = []; order.push(day); } days[day].push(row); }
     (d.events || []).forEach(function (e) {
@@ -2467,34 +2598,36 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
     });
     if (!days[today0]) { days[today0] = []; order.push(today0); }
     order.sort(function (a, b) { return a - b; });
+    order.forEach(function (day) { days[day].sort(function (a, b) { return (a.allDay ? -1 : a.start) - (b.allDay ? -1 : b.start); }); });
+    return { now: now, today0: today0, days: days, order: order };
+  }
 
-    order.forEach(function (day) {
+  function calRender() {
+    var st = Cal.status, d = Cal.data;
+    var hidden = st === 'nopass' || st === 'pass' || st === 'setup' || st === 'nofeeds' || st === 'missing';
+    if (hidden) d = null;
+    homeCalRender(d);
+    setText(el.calStatus, calStatusText());
+    el.calLegend.innerHTML = '';
+    el.calList.innerHTML = '';
+    if (!d) return;
+    (d.feeds || []).forEach(function (f) {
+      var k = document.createElement('span'); k.className = 'cal-key' + (f.ok ? '' : ' bad');
+      var dot = document.createElement('i'); dot.className = 'cal-dot'; if (hexOk(f.color)) dot.style.background = f.color;
+      k.appendChild(dot); k.appendChild(document.createTextNode(f.name));
+      el.calLegend.appendChild(k);
+    });
+
+    var g = calGroups(d, 14), now = g.now, today0 = g.today0, days = g.days;
+
+    g.order.forEach(function (day) {
       var h = document.createElement('p'); h.className = 'cal-day';
       h.textContent = day === today0 ? 'Today' : (day === addDays(today0, 1) ? 'Tomorrow' : dateText(new Date(day)));
       el.calList.appendChild(h);
       var rows = days[day];
       rows.sort(function (a, b) { return (a.allDay ? -1 : a.start) - (b.allDay ? -1 : b.start); });
       if (!rows.length) { var n = document.createElement('p'); n.className = 'cal-none'; n.textContent = 'Nothing on.'; el.calList.appendChild(n); }
-      rows.forEach(function (r) {
-        var ev = document.createElement('div'); ev.className = 'cal-ev' + (!r.allDay && r.end < now.getTime() ? ' past' : '');
-        var bar = document.createElement('span'); bar.className = 'cal-bar'; if (hexOk(r.color)) bar.style.background = r.color;
-        var tm = document.createElement('span'); tm.className = 'cal-t';
-        if (r.allDay) tm.textContent = 'All day';
-        else {
-          tm.textContent = clockText(new Date(r.start));
-          if (r.end - r.start >= MIN) {
-            var u = document.createElement('small');
-            var same = startOfDay(new Date(r.end)).getTime() === day;
-            u.textContent = 'until ' + (same ? '' : dateText(new Date(r.end)) + ' ') + clockText(new Date(r.end));
-            tm.appendChild(u);
-          }
-        }
-        var body = document.createElement('span'); body.className = 'cal-b';
-        var b = document.createElement('b'); b.textContent = r.title; body.appendChild(b);
-        var s = document.createElement('small'); s.textContent = r.who + (r.where ? ' · ' + r.where.replace(/\s*\n\s*/g, ', ') : ''); body.appendChild(s);
-        ev.appendChild(bar); ev.appendChild(tm); ev.appendChild(body);
-        el.calList.appendChild(ev);
-      });
+      rows.forEach(function (r) { el.calList.appendChild(calEvent(r, day, now)); });
     });
     if (!(d.events || []).length) {
       var none = document.createElement('p'); none.className = 'cal-none'; none.textContent = 'Nothing coming up in the next two weeks.';
@@ -2512,100 +2645,386 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
   }
 
   // ---- photo frame
+  // Tapping Photo frame in Family starts it. It also starts by itself in the day look when nobody has touched
+  // the screen for a while (Settings, Photo frame). Each lap is a fresh shuffle, and a lap never begins with
+  // the photo that has just been shown. A tap goes back, and so does the night look.
   function shuffle(a) {
     for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; }
     return a;
   }
-  var Frame = {
-    on: false, ids: [], i: 0, timer: null, front: 'A', urls: {}, run: 0,
-    list: function () {
-      var h = famAuth();
-      if (!h) return Promise.reject(Object.assign(new Error('pass'), { status: 401 }));
-      return fetch('/api/photos', { cache: 'no-store', headers: h }).then(function (r) {
-        if (!r.ok) throw Object.assign(new Error('http'), { status: r.status });
-        return r.json();
-      }).then(function (d) {
-        var ids = (d.photos || []).map(function (p) { return p.id; });
-        if (ids.slice().sort().join() !== Frame.ids.slice().sort().join()) Frame.ids = shuffle(ids);
-      });
-    },
-    open: function () {
-      famMsg('Loading photos…');
-      famReady().then(function () {
-        if (!famAuth()) { famMsg(famNoText()); throw null; }
-        return Frame.list();
-      }).then(function () {
-        if (!Frame.ids.length) { famMsg('No photos yet. Add some from a phone or laptop at /photos.html.'); return; }
-        famMsg('');
-        closePanel();
-        Frame.on = true; Frame.i = 0; Frame.run++;
-        el.frame.classList.add('on');
-        Frame.next(true);
-      }).catch(function (e) {
-        if (!e) return;
-        famMsg(e && e.status === 401 ? 'The nursery passcode doesn’t match the one in Netlify.' :
-          e && e.status === 503 ? 'The server isn’t ready yet. Try again once the site has finished redeploying.' :
-          e && e.status === 404 ? 'This site doesn’t have the photos function yet. Redeploy it from GitHub.' : 'Can’t load the photos. Check the connection.');
-      });
-    },
-    next: function (first) {
-      if (!Frame.on) return;
-      clearTimeout(Frame.timer);
-      if (!Frame.ids.length) { Frame.close(); return; }
-      var run = Frame.run, id =Frame.ids[Frame.i % Frame.ids.length], back = Frame.front === 'A' ? 'B' : 'A';
-      Frame.i++;
-      if (Frame.i % Frame.ids.length === 0) Frame.list().catch(function () { /* try again next lap */ });
-      function later(ms) { Frame.timer = setTimeout(function () { Frame.next(); }, ms); }
-      fetch('/api/photos?id=' + encodeURIComponent(id), { headers: famAuth() || {} }).then(function (r) {
-        if (!r.ok) throw new Error('http');
-        return r.blob();
-      }).then(function (b) {
-        if (!Frame.on || run !== Frame.run) return;
-        var url = URL.createObjectURL(b), slide = $('f' + back), img = slide.getElementsByTagName('img')[0];
-        img.onload = function () {
-          if (!Frame.on || run !== Frame.run) { URL.revokeObjectURL(url); return; }
-          slide.getElementsByClassName('bg')[0].style.backgroundImage = 'url("' + url + '")';
-          slide.classList.add('show');
-          $('f' + Frame.front).classList.remove('show');
-          var old = Frame.urls[Frame.front];
-          if (old) setTimeout(function () { URL.revokeObjectURL(old); }, 2500);
-          Frame.urls[back] = url; Frame.front = back;
-          setText(el.fNote, '');
-          later(20000);
-        };
-        img.onerror = function () { URL.revokeObjectURL(url); if (Frame.on && run === Frame.run) later(5000); };
-        img.src = url;
-      }).catch(function () {
-        if (!Frame.on || run !== Frame.run) return;
-        if (first) setText(el.fNote, 'Can’t load the photos. Tap to go back.');
-        later(first ? 8000 : 30000);
-      });
-    },
-    close: function () {
-      if (!Frame.on) return;
-      Frame.on = false; Frame.run++;
-      clearTimeout(Frame.timer);
-      el.frame.classList.remove('on');
-      ['A', 'B'].forEach(function (k) {
-        var s = $('f' + k); s.classList.remove('show'); s.getElementsByTagName('img')[0].removeAttribute('src');
-        s.getElementsByClassName('bg')[0].style.backgroundImage = '';
-        if (Frame.urls[k]) { URL.revokeObjectURL(Frame.urls[k]); Frame.urls[k] = ''; }
-      });
-      setText(el.fNote, '');
-      render();
+  // The last time anyone touched the screen, and how many times it has been touched.
+  var frameTouch = { at: Date.now(), n: 0 };
+  function frameTouched() { if (frameTouch) { frameTouch.at = Date.now(); frameTouch.n++; } }
+  ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'click'].forEach(function (t) { document.addEventListener(t, frameTouched, true); });
+  var FRAME_WAITS = [0, 2, 5, 10, 30];
+  function frameMinutes() { return FRAME_WAITS.indexOf(settings.frameIdle) >= 0 ? settings.frameIdle : DEFAULTS.frameIdle; }
+  // True while something else has the screen, so the frame must not come on by itself.
+  function frameBlocked() {
+    return Frame.on || lastMode !== 'day' || document.visibilityState === 'hidden' || !!openOverlay ||
+      Sound.playing || Light.on || Feed.on || Log.on || el.controls.classList.contains('show');
+  }
+  // The shuffled slideshow itself. The photo frame and the Home page each run one.
+  // root holds two .slide elements (each a blurred .bg and an img) that fade into each other.
+  function Slides(root, gap) {
+    var sl = root.querySelectorAll('.slide');
+    this.root = root; this.gap = gap || 20000;
+    this.slide = { A: sl[0], B: sl[1] }; this.noteEl = root.querySelector('.frame-note');
+    this.on = false; this.known = []; this.ids = []; this.i = 0; this.last = ''; this.timer = null; this.front = 'A'; this.urls = {}; this.run = 0;
+    this.onEmpty = null; this.tag = '';   // tag marks which slideshow is asking, in the address
+  }
+  Slides.prototype.note = function (t) { if (this.noteEl) setText(this.noteEl, t); };
+  // Ask the server which photos there are.
+  Slides.prototype.list = function () {
+    var self = this, h = famAuth();
+    if (!h) return Promise.reject(Object.assign(new Error('pass'), { status: 401 }));
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
+    return fetch('/api/photos' + (self.tag ? '?' + self.tag : ''), { cache: 'no-store', headers: h, signal: ctrl ? ctrl.signal : undefined }).then(function (r) {
+      clearTimeout(timer);
+      if (!r.ok) throw Object.assign(new Error('http'), { status: r.status });
+      return r.json();
+    }, function (e) { clearTimeout(timer); throw e; }).then(function (d) {
+      self.known = (d && d.photos || []).map(function (p) { return p && p.id; }).filter(function (id) { return typeof id === 'string' && id; });
+    });
+  };
+  // A fresh shuffle of every photo for the next lap. It never starts with the photo shown last.
+  Slides.prototype.deal = function () {
+    var ids = shuffle(this.known.slice());
+    if (ids.length > 1 && ids[0] === this.last) {
+      var j = 1 + Math.floor(Math.random() * (ids.length - 1)), t = ids[0]; ids[0] = ids[j]; ids[j] = t;
     }
+    this.ids = ids; this.i = 0;
+  };
+  Slides.prototype.start = function () { this.deal(); this.on = true; this.run++; this.next(true); };
+  Slides.prototype.next = function (first) {
+    var self = this;
+    if (!self.on) return;
+    clearTimeout(self.timer);
+    if (self.i >= self.ids.length) self.deal();
+    if (!self.ids.length) { self.stop(); if (self.onEmpty) self.onEmpty(); return; }
+    var run = self.run, id = self.ids[self.i], back = self.front === 'A' ? 'B' : 'A';
+    self.i++; self.last = id;
+    if (self.i >= self.ids.length) self.list().catch(function () { /* the next lap uses what it already has */ });
+    function later(ms) { self.timer = setTimeout(function () { self.next(); }, ms); }
+    fetch('/api/photos?' + (self.tag ? self.tag + '&' : '') + 'id=' + encodeURIComponent(id), { headers: famAuth() || {} }).then(function (r) {
+      if (!r.ok) throw new Error('http');
+      return r.blob();
+    }).then(function (b) {
+      if (!self.on || run !== self.run) return;
+      var url = URL.createObjectURL(b), slide = self.slide[back], img = slide.getElementsByTagName('img')[0];
+      img.onload = function () {
+        if (!self.on || run !== self.run) { URL.revokeObjectURL(url); return; }
+        slide.getElementsByClassName('bg')[0].style.backgroundImage = 'url("' + url + '")';
+        slide.classList.add('show');
+        self.slide[self.front].classList.remove('show');
+        var old = self.urls[self.front];
+        if (old) setTimeout(function () { URL.revokeObjectURL(old); }, 2500);
+        self.urls[back] = url; self.front = back;
+        self.note('');
+        later(self.gap);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); if (self.on && run === self.run) later(5000); };
+      img.src = url;
+    }).catch(function () {
+      if (!self.on || run !== self.run) return;
+      if (first) self.note(self.failText || 'Can’t load the photos.');
+      later(first ? 8000 : 30000);
+    });
+  };
+  Slides.prototype.stop = function () {
+    if (!this.on) return;
+    this.on = false; this.run++;
+    clearTimeout(this.timer);
+    var self = this;
+    ['A', 'B'].forEach(function (k) {
+      var s = self.slide[k]; s.classList.remove('show'); s.getElementsByTagName('img')[0].removeAttribute('src');
+      s.getElementsByClassName('bg')[0].style.backgroundImage = '';
+      if (self.urls[k]) { URL.revokeObjectURL(self.urls[k]); self.urls[k] = ''; }
+    });
+    this.note('');
+  };
+
+  // The full screen photo frame.
+  var Frame = new Slides(el.frame, 20000);
+  Frame.failText = 'Can’t load the photos. Tap to go back.';
+  Frame.auto = false; Frame.loading = false;
+  Frame.onEmpty = function () { Frame.finish(); };     // every photo was deleted while it was showing
+  Frame.finish = function () {
+    el.frame.classList.remove('on'); Frame.auto = false;
+    frameTouched();   // however it closed, the screen then gets its full wait before the frame comes back
+    render();
+    tileCheck();
+  };
+  Frame.close = function () { if (Frame.on) { Frame.stop(); Frame.finish(); } };
+  // auto is true when the screen has been left alone, so nothing is said if it can't start.
+  Frame.open = function (auto) {
+    if (Frame.on) return;
+    if (!auto) famMsg('Loading photos…');
+    if (Frame.loading) return;
+    Frame.loading = true;
+    var seq = frameTouch.n;
+    famReady().then(function () {
+      if (!famAuth()) { if (!auto) famMsg(famNoText()); throw null; }
+      return Frame.list();
+    }).then(function () {
+      if (!Frame.known.length) { if (!auto) famMsg('No photos yet. Add some from a phone or laptop at /photos.html.'); return; }
+      if (auto && (frameTouch.n !== seq || frameBlocked())) return;   // someone used the screen while the photos loaded
+      famMsg('');
+      if (openOverlay) closePanel();
+      Frame.auto = !!auto;
+      if (auto) Pager.go(0, true);   // when it closes, the screen is back on Home
+      el.frame.classList.add('on');
+      Frame.start();
+      tileCheck();
+    }).catch(function (e) {
+      if (!e || auto) return;
+      famMsg(e && e.status === 401 ? 'The nursery passcode doesn’t match the one in Netlify.' :
+        e && e.status === 503 ? 'The server isn’t ready yet. Try again once the site has finished redeploying.' :
+        e && e.status === 404 ? 'This site doesn’t have the photos function yet. Redeploy it from GitHub.' : 'Can’t load the photos. Check the connection.');
+    }).then(function () { Frame.loading = false; });
   };
   el.frame.addEventListener('click', function () { Frame.close(); });
   $('frameBtn').addEventListener('click', function () { Frame.open(); });
+  // Comes on by itself after the screen has been left alone. A try that finds nothing to show, or fails,
+  // is not repeated until the full wait has passed again.
+  function frameIdleCheck() {
+    var wait = frameMinutes() * 60000;
+    if (!wait || Frame.loading || frameBlocked() || Date.now() - frameTouch.at < wait) return;
+    if (!famAuth()) return;   // not sharing with the server yet, so there is nothing to ask for
+    frameTouched();
+    Frame.open(true);
+  }
+  setInterval(frameIdleCheck, 5000);
   setInterval(function () {
     if (openOverlay === el.family) { calRender(); if (Date.now() - Cal.at > 5 * 60000) calLoad(); }
   }, 30000);
 
+  // ---------- Home, and the pages you swipe between ----------
+  // Home is the screen the day starts on: the clock, the weather, what is coming up on the family calendar,
+  // the photos and the baby at a glance. One swipe to the left is the nursery screen (temperature and bag).
+  // The night look always starts on the nursery screen, and the day look comes back to Home when nobody has
+  // touched the screen for a couple of minutes.
+  var HOME_RETURN = 2 * 60000;
+  var PAGES = [{ id: 'pageHome', name: 'Home', hash: 'home' }, { id: 'pageNursery', name: 'Nursery', hash: 'nursery' }];
+  var Home = { calKey: '', wxKey: '' };
+
+  var Pager = {
+    at: 0,
+    width: function () { return el.pager.clientWidth || window.innerWidth || 1; },
+    // Moves to page i. instant skips the slide. A swipe does the same by itself (scroll-snap in the CSS).
+    go: function (i, instant) {
+      i = Math.max(0, Math.min(PAGES.length - 1, i));
+      Pager.at = i; Pager.paint();
+      var x = i * Pager.width();
+      if (!instant && el.pager.scrollTo) { try { el.pager.scrollTo({ left: x, behavior: 'smooth' }); return; } catch (e) { /* older WebView */ } }
+      el.pager.scrollLeft = x;
+    },
+    // Which page is showing, worked out from where the swipe came to rest.
+    settle: function () {
+      var i = Math.max(0, Math.min(PAGES.length - 1, Math.round(el.pager.scrollLeft / Pager.width())));
+      if (i !== Pager.at) { Pager.at = i; Pager.paint(); }
+    },
+    paint: function () {
+      var d = el.dots.children;
+      for (var k = 0; k < d.length; k++) { d[k].classList.toggle('on', k === Pager.at); d[k].setAttribute('aria-current', k === Pager.at ? 'page' : 'false'); }
+      if (Pager.at === 0) { homeRender(new Date()); homeCalCheck(); }
+      tileCheck();
+    }
+  };
+  PAGES.forEach(function (p, i) {
+    var b = document.createElement('button'); b.className = 'dot'; b.setAttribute('aria-label', p.name);
+    b.addEventListener('click', function (e) { e.stopPropagation(); Pager.go(i); });
+    el.dots.appendChild(b);
+  });
+  var settleTimer = null;
+  el.pager.addEventListener('scroll', function () { clearTimeout(settleTimer); settleTimer = setTimeout(Pager.settle, 120); });
+  window.addEventListener('resize', function () { el.pager.scrollLeft = Pager.at * Pager.width(); });
+  // Arrow keys, for a laptop.
+  document.addEventListener('keydown', function (e) {
+    var t = e.target && e.target.tagName;
+    if (openOverlay || Frame.on || Feed.on || Light.on || Log.on || t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT') return;
+    if (e.key === 'ArrowLeft') Pager.go(Pager.at - 1);
+    else if (e.key === 'ArrowRight') Pager.go(Pager.at + 1);
+  });
+  // Where the screen starts: a page asked for in the address (#home, #nursery), otherwise by the look.
+  // #home, #nursery or page=nursery, alone or after the setup parts (#key=...&nursery).
+  function pageIn(hash) {
+    var i = -1;
+    String(hash || '').replace(/^#/, '').split('&').forEach(function (t) {
+      t = t.replace(/^page=/, '');
+      PAGES.forEach(function (p, k) { if (p.hash === t) i = k; });
+    });
+    return i;
+  }
+  function pagerStart(now) {
+    var i = pageIn(START_HASH);
+    Pager.go(i >= 0 ? i : (modeNow(now) === 'night' ? 1 : 0), true);
+  }
+  window.addEventListener('hashchange', function () { var i = pageIn(location.hash); if (i >= 0) Pager.go(i); });
+  // Back to Home once the screen has been left alone.
+  function pagerIdle() {
+    if (Pager.at === 0 || lastMode !== 'day' || openOverlay || Frame.on || el.controls.classList.contains('show')) return;
+    if (Date.now() - frameTouch.at >= HOME_RETURN) Pager.go(0);
+  }
+
+  // ---- the top of Home: clock, date and the weather now
+  function homeWeather(now) {
+    var r = reading(now);
+    if (!r) return null;
+    var list = hours(), start = startOfDay(now).getTime(), today = between(list, start, start + 86400000), parts = [];
+    if (r.code !== null && r.code !== undefined && WEATHER_WORDS[r.code]) parts.push(WEATHER_WORDS[r.code]);
+    if (today.length) parts.push(deg(maxOf(today).temp) + ' top, ' + deg(minOf(today).temp) + ' low');
+    return { temp: (r.source === 'pod' ? 'Room ' : '') + deg(r.temp), text: parts.join(' · ') };
+  }
+  function homeWeatherRender(now) {
+    var w = homeWeather(now), key = w ? w.temp + '|' + w.text : '';
+    if (key === Home.wxKey) return;
+    Home.wxKey = key;
+    el.hWx.innerHTML = '';
+    if (!w) return;
+    var b = document.createElement('b'); b.textContent = w.temp;
+    el.hWx.appendChild(b); el.hWx.appendChild(document.createTextNode(w.text));
+  }
+
+  // ---- what is coming up
+  function homeCalNote(d) {
+    var st = Cal.status;
+    if (st === 'ok') {
+      var bad = ((d && d.feeds) || []).filter(function (f) { return !f.ok; }).map(function (f) { return f.name + '’s calendar can’t be read.'; });
+      return bad.join(' ');
+    }
+    if (st === 'offline') return 'Can’t reach the server.' + (Cal.at ? ' Showing the calendar as it was at ' + clockText(new Date(Cal.at)) + '.' : '');
+    if (st === 'idle') return d ? '' : 'Loading the calendar…';
+    return calStatusText();
+  }
+  function homeCalKey() {
+    return Math.floor(Date.now() / 60000) + '|' + Cal.at + '|' + Cal.status + '|' + el.hCal.clientHeight + '|' + el.hCal.clientWidth;
+  }
+  // Called whenever the calendar is drawn (d is null when there is nothing to show). Fits as many days and
+  // events as the space allows, and says how many more there are.
+  function homeCalRender(d) {
+    var box = el.hCal, now = new Date(), nodes = [], more = 0;
+    Home.calKey = homeCalKey();
+    box.innerHTML = '';
+    function add(node, type) { box.appendChild(node); nodes.push({ node: node, type: type }); }
+    function p(cls, text) { var n = document.createElement('p'); n.className = cls; n.textContent = text; return n; }
+    box.appendChild(p('h-head', 'Coming up'));
+    var note = homeCalNote(d);
+    if (note) box.appendChild(p('h-note', note));   // a problem is said first, so it is never cut off
+    if (!d) return;
+    var g = calGroups(d, 7);
+    g.order.forEach(function (day) {
+      var rows = g.days[day].filter(function (r) { return r.allDay || r.end >= now.getTime(); });
+      var had = g.days[day].length;
+      if (!rows.length && day !== g.today0) return;
+      add(p('cal-day', day === g.today0 ? 'Today' : (day === addDays(g.today0, 1) ? 'Tomorrow' : dateText(new Date(day)))), 'day');
+      if (!rows.length) add(p('cal-none', had ? 'Nothing more on.' : 'Nothing on.'), 'none');
+      rows.forEach(function (r) { add(calEvent(r, day, now), 'ev'); });
+    });
+    if (!(d.events || []).length) { nodes.forEach(function (n) { box.removeChild(n.node); }); nodes = []; add(p('cal-none', 'Nothing coming up this week.'), 'none'); }
+    var tail = null;
+    function over() { return box.clientHeight > 0 && box.scrollHeight > box.clientHeight + 1; }
+    function trim() {
+      while (over() && nodes.length > 1) {
+        var n = nodes.pop(); box.removeChild(n.node); if (n.type === 'ev') more++;
+        while (nodes.length > 1 && nodes[nodes.length - 1].type === 'day') box.removeChild(nodes.pop().node);
+      }
+    }
+    trim();
+    if (more) {
+      tail = p('h-more', '+ ' + more + ' more'); box.appendChild(tail);
+      var before = more; trim();
+      if (more !== before) tail.textContent = '+ ' + more + ' more';
+    }
+  }
+  // Keeps the calendar fresh while Home is showing.
+  function homeCalCheck() {
+    if (lastMode !== 'day' || Pager.at !== 0 || document.visibilityState === 'hidden') return;
+    famReady().then(function () {
+      if (!famAuth()) { calLoad(); return; }   // says why it can't (no passcode here yet)
+      if (Cal.busy) return;
+      var age = Date.now() - Cal.at;
+      if (!Cal.at || age > 5 * 60000 || (Cal.status !== 'ok' && age > 60000)) calLoad();
+    });
+  }
+
+  // ---- the baby at a glance (the same numbers as the band on the nursery screen)
+  function homePipRender(now) {
+    if (!pipOn()) return;
+    var v = pipView(now), main = $('hp-main');
+    el.hPip.classList.toggle('stale', !!v.stale);
+    main.classList.toggle('msg', !!v.msg);
+    if (v.msg) {
+      main.classList.add('alert');
+      setText($('hp-k'), 'Pip'); setText($('hp-v'), v.msg); setText($('hp-s'), v.sub);
+      show($('hp-i2'), false); show($('hp-i3'), false); show($('hp-i4'), false);
+      return;
+    }
+    main.classList.toggle('alert', !!v.stale);
+    setText($('hp-k'), v.main.k); setText($('hp-v'), v.main.v); setText($('hp-s'), v.main.s);
+    show($('hp-i2'), !!v.side);
+    if (v.side) { setText($('hp-k2'), v.side.k); setText($('hp-v2'), v.side.v); setText($('hp-s2'), v.side.s); }
+    show($('hp-i3'), true);
+    setText($('hp-v3'), v.c24.v); setText($('hp-s3'), v.c24.s);
+    show($('hp-i4'), !!v.sleep);
+    if (v.sleep) { setText($('hp-k4'), v.sleep.k); setText($('hp-v4'), v.sleep.v); setText($('hp-s4'), v.sleep.s); }
+  }
+
+  // ---- the photo tile: the same shuffled slideshow as the photo frame, in a corner of Home
+  var Tile = new Slides(el.hPhoto, 20000);
+  Tile.failText = 'Can’t load the photos.'; Tile.tag = 't=home';
+  Tile.loading = false; Tile.retryAt = 0;
+  function tileSay(t) { setText(el.hEmpty, t || ''); el.hPhoto.classList.toggle('has', Tile.on); }
+  Tile.onEmpty = function () { Tile.retryAt = Date.now() + 60000; tileSay('No photos yet. Add some from a phone or laptop at /photos.html.'); };
+  // Only while Home is showing in the day look and nothing else has the screen.
+  function tileWanted() {
+    return Pager.at === 0 && lastMode === 'day' && document.visibilityState !== 'hidden' && !Frame.on && !Feed.on && !Light.on;
+  }
+  function tileCheck() {
+    if (!tileWanted()) { if (Tile.on) { Tile.stop(); tileSay(''); } return; }
+    if (Tile.on || Tile.loading || Date.now() < Tile.retryAt) return;
+    Tile.loading = true;
+    famReady().then(function () {
+      if (!famAuth()) { tileSay(famNoText()); Tile.retryAt = Date.now() + 30000; return; }
+      return Tile.list().then(function () {
+        if (!tileWanted()) return;
+        if (!Tile.known.length) { Tile.retryAt = Date.now() + 120000; tileSay('No photos yet. Add some from a phone or laptop at /photos.html.'); return; }
+        Tile.start(); tileSay('');
+      });
+    }).catch(function (e) {
+      Tile.retryAt = Date.now() + 60000;
+      tileSay(e && e.status === 401 ? 'The nursery passcode doesn’t match the one in Netlify.' :
+        e && e.status === 404 ? 'This site doesn’t have the photos function yet. Redeploy it from GitHub.' : 'Can’t load the photos.');
+    }).then(function () { Tile.loading = false; });
+  }
+
+  // ---- all of Home, kept up to date by render()
+  function homeRender(now) {
+    setText(el.hClock, clockText(now));
+    setText(el.hDate, dateText(now) + pipAge());
+    homeWeatherRender(now);
+    homePipRender(now);
+    if (homeCalKey() !== Home.calKey) calRender();
+    tileCheck();
+  }
+  // A tap on Home: the photo goes full screen, the baby band goes to logging, anything else shows the buttons.
+  el.home.addEventListener('click', function (e) {
+    var t = e.target;
+    if (t.closest && t.closest('#hPhoto') && Tile.on) { Frame.open(); return; }
+    if (t.closest && t.closest('#hPip') && pipOn() && logOn()) {
+      if (pip.status === 'pass' || pip.status === 'address') openPanel(el.settings); else Log.open('main');
+      return;
+    }
+    showControls(!el.controls.classList.contains('show'));
+  });
+  setInterval(pagerIdle, 5000);
+  setInterval(homeCalCheck, 30000);
   // ---------- upkeep ----------
   // Shift everything a few pixels every couple of minutes so nothing sits still on the screen for months.
   function nudge() {
     var dx = Math.round(Math.random() * 8 - 4), dy = Math.round(Math.random() * 8 - 4);
     el.stage.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    el.home.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
     el.feedInner.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
   }
   // When a new version is published (GitHub to Netlify), reload to pick it up, but only in the
@@ -2617,16 +3036,17 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
       var tag = r.headers.get('etag') || r.headers.get('last-modified');
       if (!r.ok || !tag) return;
       if (pageTag === null) { pageTag = tag; return; }
-      var busy = Sound.playing || Light.on || Feed.on || Log.on || Frame.on || openOverlay || el.controls.classList.contains('show');
+      var busy = Sound.playing || Light.on || Feed.on || Log.on || (Frame.on && !Frame.auto) || openOverlay || el.controls.classList.contains('show');
       if (tag !== pageTag && !busy && modeNow(new Date()) === 'day') location.reload();
     }).catch(function () { /* offline; try again later */ });
   }
 
   document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { render(); pipLoad(); syncSoon(0); } });
-  window.addEventListener('online', function () { loadWeather(); loadAir(); pipLoad(); syncSoon(0); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { render(); pipLoad(); syncSoon(0); homeCalCheck(); } });
+  window.addEventListener('online', function () { loadWeather(); loadAir(); pipLoad(); syncSoon(0); homeCalCheck(); });
 
   render();
+  pagerStart(new Date());
   loadWeather();
   loadAir();
   readPod();
@@ -2638,7 +3058,7 @@ body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18de
   setInterval(render, 5000);
   setInterval(pipLoad, 15000);
   setInterval(function () { syncSoon(0); }, 60000);
-  setInterval(function () { if (pip.fast) renderPip(new Date()); if (Feed.on) Feed.paint(); if (Log.on) Log.tick(); }, 1000);
+  setInterval(function () { if (pip.fast) { renderPip(new Date()); homePipRender(new Date()); } if (Feed.on) Feed.paint(); if (Log.on) Log.tick(); }, 1000);
   setInterval(loadWeather, 15 * 60000);
   setInterval(loadAir, 30 * 60000);
   if (podMode) setInterval(readPod, 30000);

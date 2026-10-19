@@ -11,7 +11,18 @@ An always-on screen for the nursery, built for an Amazon Echo Show 8 running Lin
 - Pip: the last feed, the next side, nappies and sleep from the Pip baby tracker, and a night feed screen for 3 am.
 - Logging to Pip from the screen (see below).
 - The same settings on the Echo, a laptop and a phone (see Shared settings).
-- Family: the next two weeks of everyone's Apple Calendar, one colour per person, and a photo frame slideshow (see below).
+- Home: the family calendar, the photos, the weather and the baby at a glance, with the nursery screen one swipe away (see Pages).
+- Family: the next two weeks of everyone's calendars, one colour per person, and a photo frame slideshow that starts by itself when the screen is left alone (see below).
+
+## Pages
+
+The screen opens on **Home**: the clock and date, the weather now and for the day, what is coming up on the family calendar, a shuffled slideshow of the family photos, and the baby at a glance. **Swipe left** for the nursery screen (the temperature, TOG bag and layers, the baby band and tonight's temperatures). Swipe right to come back. The dots at the bottom show which page you are on and can be tapped, and on a laptop the arrow keys work too.
+
+- The night look always opens on the nursery screen, and the day look moves back to Home when it starts.
+- In the day look, the nursery screen goes back to Home after 2 minutes without a touch.
+- Tap the photo on Home to see it full screen, the baby strip to log, or anywhere else for the buttons.
+- `/#home` and `/#nursery` open a particular page.
+- Home only shows the calendar and photos when the site's sharing is working (see Shared settings), and says what is missing when it is not.
 
 ## Putting it online
 
@@ -23,7 +34,7 @@ In Fully Kiosk, set the start URL to the Netlify address.
 
 Every device that opens the address uses the same settings, so there is nothing to set up on each one. Type the Pip address on a laptop and the Echo already has it. The same goes for the location, night times, room adjustment and TOG bags.
 
-What is shared: the Pip address and birthday, the location, night start and end times, the room adjustment and which TOG bags are listed. What stays on each device: sounds, night light, "Logged as", the automatic night feed screen and the Pip passcode (see below).
+What is shared: the Pip address and birthday, the location, night start and end times, the room adjustment, which TOG bags are listed and how long until the photo frame starts. What stays on each device: sounds, night light, "Logged as", the automatic night feed screen and the Pip passcode (see below).
 
 How it behaves:
 
@@ -71,7 +82,9 @@ Anyone with that link can read that calendar, so share only calendars you are ha
 
 Open `https://YOUR-NURSERY-SITE/photos.html` on a phone or laptop. (If the site is locked, use `photos.html#key=YOUR-NURSERY-PASSCODE` or sign in with the passcode.) Choose photos and they are shrunk, saved as plain JPEGs without the camera and location details, and added. Tap Delete twice to remove one. Up to 300 photos are kept.
 
-On the Echo, Family, then Photo frame starts a full screen slideshow (20 seconds each, with a blurred backdrop so nothing is cropped). Tap anywhere to close it. It closes by itself when the night look starts. Photos are stored in a private Netlify Blobs store, never in this repo. While the site is open, anyone who has the site's address can see, add and delete photos, so lock it if you want them private.
+On the Echo, Family, then Photo frame starts a full screen slideshow (20 seconds each, with a blurred backdrop so nothing is cropped). Tap anywhere to close it. It closes by itself when the night look starts.
+
+The frame also starts by itself once nobody has touched the screen for 5 minutes. Settings, Photo frame changes that to 2, 10 or 30 minutes, or never, and the choice is shared by every screen. It only comes on in the day look, never while a sound is playing, the night light or a screen is open, and it waits the full time again after any touch. Each lap through the photos is shuffled again, and a lap never starts with the photo that has just been shown. If there are no photos it quietly does nothing and tries again after the same wait. Photos are stored in a private Netlify Blobs store, never in this repo. While the site is open, anyone who has the site's address can see, add and delete photos, so lock it if you want them private.
 
 ## Connecting Pip
 
