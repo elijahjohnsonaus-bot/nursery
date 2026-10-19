@@ -22,6 +22,14 @@
   Settings live on the device (Settings panel). Preview helpers: ?night or ?day.
   Updates: deployed from GitHub via Netlify; the page checks every 5 minutes and reloads
   itself, but only while the day look is showing and nothing is playing.
+
+  Pip (the shared newborn tracker): the Echo asks Pip's own sync address for the entries and shows
+  the last feed, next side, nappies and sleep. It can also log to Pip (feeds, bottles, nappies, sleep,
+  pump) the same way a phone does, with an outbox that survives a dropped connection. Pip's address
+  and passcode are typed into Settings on the Echo (or set once with #pip=ADDRESS&pass=PASSCODE on the
+  page link), so they never sit in this file or in the public repo.
+  Night feed: a dim red screen with the time since the last feed and big buttons, for 3 am.
+  /test.html checks the Echo's speaker, microphone, camera and screen.
 -->
 <style>
 @font-face{font-family:"Fredoka";src:url(data:font/woff2;base64,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) format("woff2");font-weight:300 700;font-style:normal;font-display:block}
@@ -179,8 +187,9 @@ input[type=range]{-webkit-appearance:none; appearance:none; background:transpare
 input[type=range]::-webkit-slider-runnable-track{height:1.4vmin; border-radius:1vmin; background:var(--line)}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; appearance:none; width:5vmin; height:5vmin; margin-top:-1.8vmin; border:0; border-radius:50%; background:var(--ink)}
 body.night input[type=range]::-webkit-slider-thumb{background:var(--amber)}
-input[type=text], input[type=time]{font-size:3.2vmin; padding:1.2vmin 2vmin; border:.3vmin solid var(--line); border-radius:1.6vmin; background:transparent; margin-right:1.6vmin; min-height:8vmin}
-input[type=text]{width:56vmin}
+input[type=text], input[type=time], input[type=password], input[type=date]{font-size:3.2vmin; padding:1.2vmin 2vmin; border:.3vmin solid var(--line); border-radius:1.6vmin; background:transparent; margin-right:1.6vmin; min-height:8vmin}
+input[type=text], input[type=password]{width:56vmin}
+a.btn{display:inline-block; text-decoration:none; color:inherit}
 .sound-grid{display:flex; flex-wrap:wrap; margin-bottom:2vmin}
 .sound{width:calc(33.333% - 1.6vmin); margin:0 1.6vmin 1.6vmin 0; text-align:left; background:transparent; border:.3vmin solid var(--line); border-radius:2vmin; padding:2vmin 2.4vmin; min-height:13vmin}
 .sound b{display:block; font-size:3.3vmin; font-weight:600}
@@ -201,6 +210,91 @@ body.night .sound span{color:var(--amber-dim)}
 .light-controls input[type=range]::-webkit-slider-runnable-track{background:rgba(255,217,168,.3)}
 .light-controls input[type=range]::-webkit-slider-thumb{background:#FFB45C}
 
+/* ---------- Pip band: last feed, next side, last 24 hours, sleep ---------- */
+.pip{grid-area:pip; display:none}
+body.has-pip .pip{display:flex}
+.pip .item.main{flex:1.6 1 0}
+.pip .v.big{font-size:5.4vmin; font-weight:600; line-height:1.05; margin-top:.3vmin}
+.pip .item.msg .v.big{font-size:3.6vmin; line-height:1.2}
+.pip.stale .item:not(.main) .v{opacity:.55}
+@media (min-aspect-ratio: 101/100){
+  body.has-pip .stage{grid-template-rows:auto minmax(0,1fr) auto auto auto;
+    grid-template-areas:"top top" "reading outfit" "pip pip" "strip strip" "tip tip"; row-gap:1.8vmin}
+  body.has-pip .temp{font-size:18vmin}
+  body.has-pip .figures{height:25vmin}
+  body.has-pip .bagline{font-size:4.8vmin; margin-top:1.8vmin}
+  body.has-pip .under{font-size:3vmin}
+}
+
+/* ---------- night feed screen (dim red, for 3 am) ---------- */
+.feed{position:fixed; top:0; right:0; bottom:0; left:0; z-index:25; display:none; background:#000; color:#C8402A; cursor:pointer}
+.feed.on{display:block}
+.feed-inner{position:absolute; top:0; right:0; bottom:0; left:0; padding:4vmin 6vmin 3.6vmin; display:flex; flex-direction:column}
+.feed-top{display:flex; justify-content:space-between; align-items:baseline; font-size:3.4vmin; color:#A02A1A}
+.feed-clock{font-size:4.4vmin; font-weight:500}
+.feed-main{flex:1 1 auto; display:flex; flex-direction:column; justify-content:center; min-height:0}
+.feed-k{font-size:4vmin; color:#A02A1A}
+.feed-v{font-size:26vmin; font-weight:500; line-height:.95; letter-spacing:-.015em; white-space:nowrap; margin-top:1vmin}
+.feed.msg .feed-v{font-size:8vmin; white-space:normal; line-height:1.1}
+.feed-s{font-size:4vmin; margin-top:2.2vmin; color:#A02A1A}
+.feed-sides{display:flex; flex-wrap:wrap; margin-top:3.4vmin}
+.feed-side{font-size:4vmin; border:.4vmin solid #5A180E; border-radius:2vmin; padding:1.4vmin 3.4vmin; margin:0 2vmin 1vmin 0; color:#7A2214}
+.feed-side.next{border-color:#C8402A; color:#C8402A; font-weight:600}
+.feed-foot{display:flex; justify-content:space-between; font-size:3.4vmin; color:#A02A1A}
+.feed-hint{font-size:2.4vmin; margin-top:1.6vmin; color:#5A180E}
+
+/* ---------- logging to Pip: big-button Log screen, night feed buttons, undo toast ---------- */
+.logscr{position:fixed; top:0; right:0; bottom:0; left:0; z-index:28; display:none; background:var(--panel); color:var(--ink)}
+.logscr.on{display:block}
+body.night .logscr{background:#000; color:#C8402A; --ink:#C8402A; --ink-soft:#A02A1A; --line:rgba(160,42,26,.6)}
+.logp{height:100%; overflow-y:auto; padding:3.4vmin 6vmin 4vmin; -webkit-overflow-scrolling:touch}
+.logp-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:2.2vmin}
+.logp-head h2{font-size:5vmin; font-weight:600}
+.logp-sync{font-size:2.6vmin; font-weight:400; color:var(--ink-soft); margin-left:3vmin}
+.logp-cols{display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,1fr); column-gap:5vmin}
+.lg-k{font-size:3vmin; color:var(--ink-soft); margin-bottom:1vmin}
+.lg-k b{font-size:3.6vmin; color:var(--ink); margin-left:1.4vmin; font-weight:600}
+.lg-row{display:flex; margin:0 -.8vmin 1.8vmin}
+.lg-tile{flex:1 1 0; margin:0 .8vmin; min-height:17vmin; padding:1.2vmin; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-size:3.6vmin; font-weight:600; text-align:center; line-height:1.15; background:transparent; border:.35vmin solid currentColor; border-radius:2.4vmin}
+.lg-tile small{display:block; font-size:2.4vmin; font-weight:400; margin-top:.5vmin; color:var(--ink-soft)}
+.lg-tile.big{min-height:27vmin; font-size:5.4vmin}
+.lg-tile.next{box-shadow:inset 0 0 0 .55vmin currentColor}
+.lg-tile.on{background:var(--ink); color:#fff; border-color:var(--ink)}
+.lg-tile.on small{color:rgba(255,255,255,.85)}
+.lg-tile.solid{background:var(--ink); color:#fff; border-color:var(--ink)}
+body.night .logscr .lg-tile.on, body.night .logscr .lg-tile.solid{background:#3A0F08; color:#E04A2E; border-color:#C8402A}
+body.night .logscr .lg-tile.on small{color:#C8402A}
+body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{color:#A02A1A}
+.lg-tile:disabled{opacity:.35}
+.lg-recent h3{font-size:2.8vmin; font-weight:500; color:var(--ink-soft); margin-bottom:.8vmin}
+.lg-item{display:flex; justify-content:space-between; align-items:center; border-top:.25vmin solid var(--line); min-height:11vmin; font-size:3vmin; line-height:1.2}
+.lg-item small{display:block; font-size:2.3vmin; color:var(--ink-soft); margin-top:.3vmin}
+.lg-item button{flex:0 0 auto; background:transparent; border:.3vmin solid var(--line); border-radius:1.4vmin; font-size:3vmin; min-width:9vmin; min-height:8vmin; padding:0 1.6vmin; margin-left:1.6vmin}
+.lg-item button.sure{border-color:currentColor; font-weight:600}
+.lg-sub h3{font-size:4vmin; font-weight:600; margin-bottom:1.6vmin}
+.lg-step{display:flex; align-items:center; margin:.6vmin 0 1.6vmin}
+.lg-step .lbl{min-width:14vmin}
+.lg-sq{flex:0 0 auto; width:15vmin; height:15vmin; font-size:7vmin; line-height:1; font-weight:500; background:transparent; border:.35vmin solid currentColor; border-radius:2.4vmin}
+.lg-val{font-size:7vmin; font-weight:600; min-width:34vmin; text-align:center}
+.lg-val em{font-style:normal; font-size:3.4vmin; font-weight:400; margin-left:1vmin; color:var(--ink-soft)}
+
+/* big buttons on the night feed screen (dim red) */
+.feed-act{display:none; margin:1.6vmin -1vmin 2.2vmin}
+.feed-act.on{display:flex}
+.fa{flex:1 1 0; margin:0 1vmin; min-height:15vmin; padding:1vmin; font-size:4.4vmin; font-weight:600; line-height:1.1; color:#C8402A; background:transparent; border:.4vmin solid #7A2214; border-radius:2.4vmin}
+.fa small{display:block; font-size:2.6vmin; font-weight:400; margin-top:.4vmin; color:#A02A1A}
+.fa.next{border-color:#C8402A}
+.fa.cur{background:#2A0B06; border-color:#C8402A}
+.fa.stop{flex:1.3 1 0; background:#3A0F08; border-color:#C8402A}
+
+/* confirmation + undo */
+.logtoast{position:fixed; left:50%; bottom:3vmin; transform:translateX(-50%); z-index:60; display:none; align-items:center; max-width:92vw;
+  background:var(--ink); color:#fff; border-radius:2.4vmin; padding:1.6vmin 3vmin; font-size:3.4vmin; font-weight:500}
+.logtoast.on{display:flex}
+.logtoast button{margin-left:3vmin; min-height:7vmin; padding:.8vmin 2.4vmin; font-size:3.2vmin; font-weight:600; background:transparent; border:.3vmin solid currentColor; border-radius:1.6vmin}
+.logtoast.red{background:#1C0704; color:#E04A2E; border:.3vmin solid #7A2214}
+
 /* ---------- phone or other tall screens ---------- */
 @media (max-aspect-ratio: 1/1){
   body{overflow:auto}
@@ -220,7 +314,21 @@ body.night .sound span{color:var(--amber-dim)}
   .btn{font-size:4.4vmin} .chip{font-size:4vmin} .lbl{font-size:4vmin} .hint{font-size:3.8vmin}
   .panel-head h2{font-size:7.5vmin} .panel h3{font-size:4.8vmin}
   .sound{width:calc(50% - 1.6vmin)} .sound b{font-size:4.6vmin} .sound span{font-size:3.6vmin}
-  input[type=text]{width:100%; margin-bottom:2vmin} input[type=range]{width:100%}
+  input[type=text], input[type=password]{width:100%; margin-bottom:2vmin} input[type=range]{width:100%}
+  body.has-pip .stage{grid-template-rows:auto; grid-template-areas:"top" "reading" "outfit" "pip" "strip" "tip"}
+  .pip .item.main{flex:1 1 100%} .pip .v.big{font-size:10vmin} .pip .item.msg .v.big{font-size:6vmin}
+  .feed-top{font-size:4.4vmin} .feed-clock{font-size:6vmin} .feed-k, .feed-s, .feed-side{font-size:5vmin} .feed-v{font-size:19vmin}
+  .logp-cols{display:block}
+  .logp-head h2{font-size:7.5vmin} .logp-sync{display:block; margin:.8vmin 0 0; font-size:3.6vmin}
+  .lg-k{font-size:4.4vmin} .lg-k b{font-size:5vmin}
+  .lg-tile{font-size:5.2vmin; min-height:19vmin} .lg-tile.big{min-height:30vmin; font-size:7vmin} .lg-tile small{font-size:3.6vmin}
+  .lg-row.four{flex-wrap:wrap} .lg-row.four .lg-tile{flex:1 1 40%; margin-bottom:1.6vmin}
+  .lg-recent{margin-top:2vmin} .lg-recent h3{font-size:4.2vmin}
+  .lg-item{font-size:4.4vmin; min-height:15vmin} .lg-item small{font-size:3.4vmin} .lg-item button{font-size:4.2vmin; min-height:11vmin; min-width:14vmin}
+  .lg-sub h3{font-size:6vmin} .lg-sq{width:20vmin; height:20vmin; font-size:9vmin} .lg-val{font-size:10vmin; min-width:44vmin} .lg-val em{font-size:4.6vmin}
+  .feed-act{flex-wrap:wrap} .fa{flex:1 1 40%; margin-bottom:2vmin; min-height:17vmin; font-size:5.6vmin} .fa small{font-size:3.6vmin}
+  .logtoast{font-size:4.6vmin} .logtoast button{font-size:4.2vmin; min-height:10vmin}
+  .feed.msg .feed-v{font-size:10vmin} .feed-foot{font-size:4.4vmin; flex-direction:column} .feed-hint{font-size:3.4vmin}
 }
 @media (prefers-reduced-motion: reduce){
   body, .bag-body, .controls, .light-controls{transition:none}
@@ -256,6 +364,13 @@ body.night .sound span{color:var(--amber-dim)}
     <p class="basis" id="basis" hidden></p>
   </section>
 
+  <section class="today pip" id="pip" aria-label="Pip">
+    <div class="item main" id="p-main"><p class="k" id="p-k">Since last feed</p><p class="v big" id="p-v"></p><p class="s" id="p-s"></p></div>
+    <div class="item" id="p-i2"><p class="k" id="p-k2">Next side</p><p class="v" id="p-v2"></p><p class="s" id="p-s2"></p></div>
+    <div class="item" id="p-i3"><p class="k">Last 24 hours</p><p class="v" id="p-v3"></p><p class="s" id="p-s3"></p></div>
+    <div class="item" id="p-i4"><p class="k" id="p-k4">Sleep</p><p class="v" id="p-v4"></p><p class="s" id="p-s4"></p></div>
+  </section>
+
   <section class="strip">
     <div class="today" id="today">
       <div class="item"><p class="k">Today</p><p class="v" id="d-range"></p><p class="s" id="d-cond"></p></div>
@@ -274,6 +389,8 @@ body.night .sound span{color:var(--amber-dim)}
 </main>
 
 <nav class="controls" id="controls" aria-label="Controls">
+  <button class="btn" data-act="log" id="logBtn" hidden>Log</button>
+  <button class="btn" data-act="feed" id="feedBtn" hidden>Night feed</button>
   <button class="btn" data-act="light">Night light</button>
   <button class="btn" data-act="sounds">Sounds</button>
   <button class="btn" data-act="look" id="lookBtn">Night look</button>
@@ -299,6 +416,30 @@ body.night .sound span{color:var(--amber-dim)}
     <div class="row end"><span id="lightEnds" class="lbl"></span><button class="btn" id="lightOff">Turn off now</button></div>
   </div>
 </div>
+
+<section class="feed" id="feed" aria-label="Night feed">
+  <div class="feed-inner" id="feedInner">
+    <div class="feed-top"><span class="feed-clock" id="f-clock"></span><span id="f-env"></span></div>
+    <div class="feed-main">
+      <p class="feed-k" id="f-k"></p>
+      <p class="feed-v" id="f-v"></p>
+      <p class="feed-s" id="f-s"></p>
+      <div class="feed-sides" id="f-sides"></div>
+    </div>
+    <div class="feed-act" id="f-act"></div>
+    <div class="feed-foot"><span id="f-foot-l"></span><span id="f-foot-r"></span></div>
+    <p class="feed-hint">Tap empty space to go back</p>
+  </div>
+</section>
+
+<section class="logscr" id="log" aria-label="Log">
+  <div class="logp">
+    <div class="logp-head"><h2>Log<span class="logp-sync" id="lg-sync"></span></h2><button class="btn" data-lg="done">Done</button></div>
+    <div id="lg-body"></div>
+  </div>
+</section>
+
+<div class="logtoast" id="logToast" role="status" aria-live="polite"><span id="lt-msg"></span><button id="lt-undo" hidden>Undo</button></div>
 
 <section class="overlay" id="sounds" aria-label="Sounds">
   <div class="panel">
@@ -328,6 +469,21 @@ body.night .sound span{color:var(--amber-dim)}
 <section class="overlay" id="settings" aria-label="Settings">
   <div class="panel">
     <div class="panel-head"><h2>Settings</h2><button class="btn" data-close>Done</button></div>
+
+    <div class="set" id="pipSet">
+      <h3>Pip</h3>
+      <p class="hint">Shows the last feed, next side, nappies and sleep from your Pip app, and lets you log feeds, bottles, nappies and sleep from this screen. Use the same address and passcode as on your phones.</p>
+      <div class="row">
+        <input type="text" id="pipHost" placeholder="Pip address" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Pip address">
+        <input type="password" id="pipPass" placeholder="Passcode" autocomplete="off" aria-label="Pip passcode">
+      </div>
+      <div class="row"><span class="lbl">Birthday</span><input type="date" id="pipDob" aria-label="Baby's date of birth"><span class="muted">optional, shows age</span></div>
+      <div class="row"><span class="lbl">Logging</span><button class="chip" id="pipLog">Let this screen log to Pip</button></div>
+      <div class="row"><span class="lbl">Logged as</span><input type="text" id="pipBy" placeholder="Nursery screen" autocomplete="off" aria-label="Name shown on entries logged here"><span class="muted">shown next to entries in Pip</span></div>
+      <div class="row"><span class="lbl">Night feed</span><button class="chip" id="pipAuto">Open the night feed screen by itself when a feed starts (night look only)</button></div>
+      <div class="row"><button class="btn primary" id="pipSave">Connect</button><span style="width:2vmin"></span><button class="btn" id="pipClear">Disconnect</button></div>
+      <p class="hint" id="pipStatus"></p>
+    </div>
 
     <div class="set">
       <h3>Location</h3>
@@ -367,6 +523,12 @@ body.night .sound span{color:var(--amber-dim)}
       <div class="row"><span class="lbl">From</span><input type="time" id="nightFrom" aria-label="Night look starts"><span class="lbl">until</span><input type="time" id="nightTo" aria-label="Night look ends"></div>
     </div>
 
+    <div class="set" id="testSet">
+      <h3>Hardware test</h3>
+      <p class="hint">Checks this Echo&rsquo;s speaker, microphone, camera and screen. Useful before adding voice features.</p>
+      <a class="btn" href="test.html">Open hardware test</a>
+    </div>
+
     <p class="hint" id="about"></p>
   </div>
 </section>
@@ -375,7 +537,7 @@ body.night .sound span{color:var(--amber-dim)}
 (function () {
   'use strict';
 
-  var VERSION = '19 Oct 2026';
+  var VERSION = '19 Oct 2026, v4';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -419,7 +581,8 @@ body.night .sound span{color:var(--amber-dim)}
     offset: 0,
     bags: { '0.2': true, '1.0': true, '2.5': true, '3.5': true },
     sound: { type: 'brown', volume: 30, timer: '60' },
-    light: { colour: 'amber', level: 45, off: '30' }
+    light: { colour: 'amber', level: 45, off: '30' },
+    pip: { host: '', pass: '', dob: '', auto: false, log: true, by: 'Nursery screen' }
   };
   function withDefaults(s) {
     var out = JSON.parse(JSON.stringify(DEFAULTS));
@@ -439,6 +602,18 @@ body.night .sound span{color:var(--amber-dim)}
   var podMode = /^(\d{1,3}\.){3}\d{1,3}$/.test(location.hostname) && !params.has('outside');
   var forced = params.has('night') ? 'night' : (params.has('day') ? 'day' : null);
 
+  // One-time setup link: page address followed by #pip=ADDRESS&pass=PASSCODE&dob=YYYY-MM-DD.
+  // A # part is never sent to the server, and it is removed from the address once saved.
+  (function () {
+    var h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+    if (!h.has('pip')) return;
+    settings.pip.host = h.get('pip') || '';
+    if (h.has('pass')) settings.pip.pass = h.get('pass') || '';
+    if (h.has('dob')) settings.pip.dob = h.get('dob') || '';
+    saveSettings();
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
+  })();
+
   // ---------- elements ----------
   var el = {
     stage: $('stage'), clock: $('clock'), date: $('date'), pill: $('pill'),
@@ -449,7 +624,10 @@ body.night .sound span{color:var(--amber-dim)}
     light: $('light'), lightControls: $('lightControls'), lightLevel: $('lightLevel'), lightEnds: $('lightEnds'),
     sounds: $('sounds'), vol: $('vol'), playBtn: $('playBtn'), soundStatus: $('soundStatus'),
     settings: $('settings'), placeName: $('placeName'), placeQuery: $('placeQuery'), placeResults: $('placeResults'),
-    roomVal: $('roomVal'), roomNow: $('roomNow'), nightFrom: $('nightFrom'), nightTo: $('nightTo'), about: $('about')
+    roomVal: $('roomVal'), roomNow: $('roomNow'), nightFrom: $('nightFrom'), nightTo: $('nightTo'), about: $('about'),
+    pip: $('pip'), feed: $('feed'), feedInner: $('feedInner'), feedBtn: $('feedBtn'),
+    pipHost: $('pipHost'), pipPass: $('pipPass'), pipDob: $('pipDob'), pipStatus: $('pipStatus'), pipBy: $('pipBy'),
+    logBtn: $('logBtn'), log: $('log'), lgBody: $('lg-body'), lgSync: $('lg-sync'), logToast: $('logToast')
   };
 
   // ---------- data ----------
@@ -671,7 +849,7 @@ body.night .sound span{color:var(--amber-dim)}
   }
 
   // ---------- render ----------
-  var state = null, drawnKey = '', lastMode = '', lastZone = 'none', tlKey = '';
+  var state = null, drawnKey = '', lastMode = '', lastZone = 'none', tlKey = '', lastEnv = null;
   function setZone(z) {
     if (z === lastZone) return;
     document.body.classList.remove('zone-' + lastZone);
@@ -802,14 +980,15 @@ body.night .sound span{color:var(--amber-dim)}
       tlKey = '';
     }
     setText(el.clock, clockText(now));
-    setText(el.date, dateText(now));
+    setText(el.date, dateText(now) + pipAge());
     setText(el.lookBtn, mode === 'night' ? 'Day look' : 'Night look');
     setText(el.tip, TIPS[tipIndex % TIPS.length]);
     renderPill(now);
+    renderPip(now);
 
     var r = reading(now);
     if (!r) {
-      state = null; drawnKey = '';
+      state = null; drawnKey = ''; lastEnv = null;
       setZone('none');
       document.body.classList.add('blank');
       el.garments.innerHTML = ''; el.bagbox.innerHTML = '';
@@ -829,6 +1008,7 @@ body.night .sound span{color:var(--amber-dim)}
     state = bandFor(t, state);
     var o = outfitFor(state);
     setZone(o.zone);
+    lastEnv = { k: r.source === 'pod' ? 'Room' : 'Outside', t: r.temp, tog: o.tog };
 
     setText(el.kicker, r.source === 'pod' ? 'Room now' : 'Outside now');
     setText(el.tnum, (Math.round(r.temp * 10) / 10).toFixed(1));
@@ -882,6 +1062,11 @@ body.night .sound span{color:var(--amber-dim)}
   }
   el.stage.addEventListener('click', function (e) {
     if (e.target.closest && e.target.closest('#pill')) return;
+    // Tapping the Pip band goes straight to logging (or to Settings when Pip needs fixing).
+    if (e.target.closest && e.target.closest('#pip') && pipOn() && logOn()) {
+      if (pip.status === 'pass' || pip.status === 'address') openPanel(el.settings); else Log.open('main');
+      return;
+    }
     showControls(!el.controls.classList.contains('show'));
   });
   el.controls.addEventListener('click', function (e) {
@@ -890,6 +1075,8 @@ body.night .sound span{color:var(--amber-dim)}
     var act = b.getAttribute('data-act');
     showControls(false);
     if (act === 'light') Light.open();
+    else if (act === 'feed') Feed.open();
+    else if (act === 'log') Log.open('main');
     else if (act === 'sounds') openPanel(el.sounds);
     else if (act === 'settings') openPanel(el.settings);
     else if (act === 'look') {
@@ -907,7 +1094,7 @@ body.night .sound span{color:var(--amber-dim)}
     openOverlay = node;
     node.classList.add('open');
     if (node === el.sounds) syncSounds();
-    if (node === el.settings) syncSettings();
+    if (node === el.settings) { pip.dirty = false; syncSettings(); }
   }
   function closePanel() {
     if (openOverlay) openOverlay.classList.remove('open');
@@ -1131,6 +1318,7 @@ body.night .sound span{color:var(--amber-dim)}
       ? 'Now going by outside ' + signed(settings.offset) + '°.' + (out !== null ? ' Outside is ' + out.toFixed(1) + '°.' : '')
       : 'Now going by the outside temperature' + (out !== null ? ' (' + out.toFixed(1) + '°).' : '.'));
     setText(el.about, 'Updates itself when a new version is published. Version ' + VERSION + '.');
+    syncPip();
   }
   el.settings.addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('button') : null;
@@ -1145,7 +1333,11 @@ body.night .sound span{color:var(--amber-dim)}
       for (var x in settings.bags) if (settings.bags[x]) count++;
       if (!(settings.bags[k] && count === 1)) settings.bags[k] = !settings.bags[k];
       drawnKey = ''; tlKey = '';
-    } else if (b.id === 'placeFind') { findPlace(); return; }
+    } else if (b.id === 'pipSave') { pipConnect(); return; }
+    else if (b.id === 'pipClear') { pipDisconnect(); return; }
+    else if (b.id === 'pipAuto') { settings.pip.auto = !settings.pip.auto; }
+    else if (b.id === 'pipLog') { settings.pip.log = settings.pip.log === false; if (!settings.pip.log && Log.on) Log.close(); }
+    else if (b.id === 'placeFind') { findPlace(); return; }
     else if (b.hasAttribute('data-lat')) {
       settings.place = { name: b.getAttribute('data-name'), lat: +b.getAttribute('data-lat'), lon: +b.getAttribute('data-lon') };
       el.placeResults.innerHTML = ''; el.placeQuery.value = '';
@@ -1181,11 +1373,726 @@ body.night .sound span{color:var(--amber-dim)}
   el.nightFrom.addEventListener('change', onTime);
   el.nightTo.addEventListener('change', onTime);
 
+  // ---------- Pip: last feed, next side, nappies, sleep, and logging ----------
+  // Talks to Pip's own sync address. The address and passcode are typed into Settings on this
+  // device, so they never sit in this file or in the public repo.
+  var MIN = 60000, HOUR = 3600000, DAY = 86400000;
+  var pipCache = load('nursery.pip') || {};
+  var pip = { origin: pipCache.origin || null, cursor: +pipCache.cursor || 0,
+    entries: (pipCache.entries && typeof pipCache.entries === 'object') ? pipCache.entries : {},
+    outbox: (pipCache.outbox && typeof pipCache.outbox === 'object') ? pipCache.outbox : {},   // id -> true, waiting for Pip to confirm
+    at: +pipCache.at || 0, status: 'idle', busy: false, again: false, inflight: null, soon: null, seenRun: undefined, fast: false, dirty: false };
+
+  function pipOrigin() {
+    var raw = String(settings.pip.host || '').trim();
+    if (!raw) return null;
+    if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
+    try {
+      var u = new URL(raw);
+      return (u.protocol === 'https:' || u.protocol === 'http:') && u.hostname ? u.origin : null;
+    } catch (e) { return null; }
+  }
+  function pipOn() { return !!pipOrigin(); }
+  function pipStore() { save('nursery.pip', { origin: pip.origin, cursor: pip.cursor, entries: pip.entries, outbox: pip.outbox, at: pip.at }); }
+  function pipReset(origin) {
+    pip.origin = origin; pip.cursor = 0; pip.entries = {}; pip.outbox = {}; pip.at = 0; pip.status = 'idle'; pip.seenRun = undefined;
+    pipStore();
+  }
+
+  // One round trip to Pip. With nothing to send it only reads (GET). With entries waiting in the
+  // outbox it sends them and reads in the same request (POST), exactly like a Pip phone does.
+  // Returns a promise that settles when the trip is over.
+  function pipLoad() {
+    var origin = pipOrigin();
+    if (!origin) return Promise.resolve();
+    if (pip.busy) { pip.again = true; return pip.inflight || Promise.resolve(); }
+    if (pip.origin !== origin) pipReset(origin);
+    pip.busy = true;
+
+    // What goes out, and which version of each, so an edit made while the request is in the air is not
+    // mistaken for the one Pip confirmed.
+    var sent = {}, out = [];
+    Object.keys(pip.outbox).forEach(function (id) {
+      var e = pip.entries[id];
+      if (!e) { delete pip.outbox[id]; return; }
+      sent[id] = e.updated; out.push(e);
+    });
+
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
+    var hdrs = { 'x-pip-pass': settings.pip.pass || '' };
+    var opts = { cache: 'no-store', headers: hdrs, signal: ctrl ? ctrl.signal : undefined };
+    if (out.length) {
+      opts.method = 'POST';
+      hdrs['content-type'] = 'application/json';
+      opts.body = JSON.stringify({ since: pip.cursor, entries: out });
+    }
+    pip.inflight = fetch(origin + '/api/sync' + (out.length ? '' : '?since=' + pip.cursor), opts).then(function (r) {
+      clearTimeout(timer);
+      if (r.status === 401) { pip.status = 'pass'; return null; }
+      if (r.status === 404) { pip.status = 'address'; return null; }
+      if (!r.ok) { pip.status = 'error'; return null; }
+      return r.json().catch(function () { pip.status = 'error'; return null; });
+    }).then(function (d) {
+      if (!d) return;
+      if (!Array.isArray(d.entries)) { pip.status = 'error'; return; }
+      if ((d.seq || 0) < pip.cursor) {   // Pip's data was reset: keep only what is still waiting to be sent
+        var keep = {};
+        Object.keys(pip.outbox).forEach(function (id) { if (pip.entries[id]) keep[id] = pip.entries[id]; });
+        pip.cursor = 0; pip.entries = keep; pip.status = 'idle';
+        return;
+      }
+      // Only clear what Pip confirmed holding, and only if it is still the version we sent.
+      (d.ack || []).forEach(function (id) {
+        var mine = pip.entries[id];
+        if (mine && sent[id] !== undefined && mine.updated === sent[id]) delete pip.outbox[id];
+      });
+      d.entries.forEach(function (e) {
+        if (!e || typeof e.id !== 'string' || pip.outbox[e.id]) return;   // ours is newer while it waits
+        var mine = pip.entries[e.id];
+        if (!mine || (e.updated || 0) >= (mine.updated || 0)) pip.entries[e.id] = e;
+      });
+      pip.cursor = d.seq || pip.cursor;
+      pip.at = Date.now();
+      pip.status = 'ok';
+      var cutoff = Date.now() - 4 * DAY;
+      Object.keys(pip.entries).forEach(function (id) {
+        var e = pip.entries[id];
+        if (!e || (!pip.outbox[id] && !e.running && (e.end || e.start || 0) < cutoff)) delete pip.entries[id];
+      });
+      pipStore();
+      var run = pipStats(Date.now()).runFeed;
+      if (pip.seenRun !== undefined && run && run.id !== pip.seenRun && settings.pip.auto &&
+          modeNow(new Date()) === 'night' && !Feed.on && !Light.on && !openOverlay && !Log.on) Feed.open();
+      pip.seenRun = run ? run.id : null;
+    }).catch(function () {
+      clearTimeout(timer);
+      pip.status = 'offline';
+    }).then(function () {
+      pip.busy = false;
+      pipStore();
+      refresh();
+      syncPipStatus();
+      if (pip.again) { pip.again = false; setTimeout(pipLoad, 300); }
+    });
+    return pip.inflight;
+  }
+
+  // The same rules Pip uses on its own home screen.
+  function pipStats(ms) {
+    var list = [], k, e;
+    for (k in pip.entries) { e = pip.entries[k]; if (e && !e.deleted && +e.start) list.push(e); }
+    list.sort(function (a, b) { return b.start - a.start; });
+    var s = { feed: null, runFeed: null, runSleep: null, lastSleep: null, next: null, c: { feeds: 0, wet: 0, dirty: 0, sleepMs: 0 } };
+    var from = ms - DAY;
+    list.forEach(function (e) {
+      var isFeed = e.type === 'breast' || e.type === 'bottle';
+      if (isFeed && !s.feed) s.feed = e;
+      if (isFeed && e.running && !s.runFeed) s.runFeed = e;
+      if (e.type === 'sleep' && e.running && !s.runSleep) s.runSleep = e;
+      if (e.type === 'sleep' && e.end && !s.lastSleep) s.lastSleep = e;
+      if (e.type === 'breast' && !s.next && (e.side || e.lastSide)) s.next = (e.lastSide || e.side) === 'left' ? 'right' : 'left';
+      if ((e.end || (e.running ? ms : e.start)) >= from) {
+        if (isFeed) s.c.feeds++;
+        if (e.type === 'nappy') { if (e.wet) s.c.wet++; if (e.dirty) s.c.dirty++; }
+        if (e.type === 'sleep' && e.end) s.c.sleepMs += e.end - e.start;
+      }
+    });
+    return s;
+  }
+  function pdur(ms) {
+    if (!(ms > 0)) ms = 0;
+    var m = Math.floor(ms / MIN), h = Math.floor(m / 60), r = m % 60;
+    return h ? h + 'h ' + (r < 10 ? '0' : '') + r + 'm' : m + 'm';
+  }
+  function pclock(ms) {
+    var s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), r = s % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r;
+  }
+  function feedWord(e) {
+    var at = clockText(new Date(e.start));
+    if (e.type === 'bottle') return 'Bottle at ' + at + (e.ml ? ' · ' + e.ml + ' mL' : '');
+    var total = (e.leftMs || 0) + (e.rightMs || 0);
+    return 'Breast feed at ' + at + (total ? ' · ' + pdur(total) : '');
+  }
+
+  // Everything the band and the night feed screen show, worked out once.
+  function pipView(now) {
+    var ms = now.getTime(), st = pip.status;
+    if (st === 'pass') return { msg: 'Passcode doesn’t match', sub: 'Check it in Settings' };
+    if (st === 'address') return { msg: 'Can’t find Pip there', sub: 'Check the address in Settings' };
+    if (!pip.at) return st === 'idle' ? { msg: 'Connecting to Pip', sub: '' } : { msg: 'Can’t reach Pip', sub: 'Check the Echo is on Wi-Fi' };
+    var s = pipStats(ms), stale = ms - pip.at > 5 * MIN, tail = stale ? ', out of date' : '', wait = 0;
+    Object.keys(pip.outbox).forEach(function (id) { var o = pip.entries[id]; if (o && ms - (o.updated || ms) > 20000) wait++; });
+    if (wait) tail += ', ' + wait + ' waiting to send';
+    var v = { stale: stale, run: !!s.runFeed, side: null, pills: null, sleep: null };
+    if (s.runFeed) {
+      var f = s.runFeed;
+      v.main = { k: 'Feeding now' + tail, v: pclock(ms - f.start), s: 'Started ' + clockText(new Date(f.start)) };
+      if (f.type === 'breast') {
+        var l = (f.leftMs || 0) + (f.side === 'left' && f.sideStart ? ms - f.sideStart : 0);
+        var r = (f.rightMs || 0) + (f.side === 'right' && f.sideStart ? ms - f.sideStart : 0);
+        v.main.s = 'Left ' + pclock(l) + ' · Right ' + pclock(r);
+        v.side = { k: 'Now on', v: f.side === 'right' ? 'Right' : 'Left', s: '' };
+        v.pills = [{ t: 'Left ' + pclock(l), on: f.side !== 'right' }, { t: 'Right ' + pclock(r), on: f.side === 'right' }];
+      }
+    } else if (s.feed) {
+      v.main = { k: 'Since last feed' + tail, v: pdur(ms - (s.feed.end || s.feed.start)), s: feedWord(s.feed) };
+      if (s.next) {
+        v.side = { k: 'Next side', v: s.next === 'left' ? 'Left' : 'Right', s: 'Last was ' + (s.next === 'left' ? 'right' : 'left') };
+        v.pills = [{ t: s.next === 'left' ? 'Left next' : 'Left last', on: s.next === 'left' },
+                   { t: s.next === 'right' ? 'Right next' : 'Right last', on: s.next === 'right' }];
+      }
+    } else {
+      v.main = { k: 'Since last feed' + tail, v: '—', s: 'No feeds logged yet' };
+    }
+    v.c24 = { v: s.c.feeds + (s.c.feeds === 1 ? ' feed' : ' feeds'), s: s.c.wet + ' wet · ' + s.c.dirty + ' dirty' };
+    if (s.runSleep) v.sleep = { k: 'Asleep', v: pdur(ms - s.runSleep.start), s: 'Since ' + clockText(new Date(s.runSleep.start)) };
+    else if (s.lastSleep) v.sleep = { k: 'Awake for', v: pdur(ms - s.lastSleep.end), s: (s.c.sleepMs / HOUR).toFixed(1) + ' h sleep in 24 h' };
+    return v;
+  }
+
+  function pipAge() {
+    var t = settings.pip.dob;
+    if (!pipOn() || !t) return '';
+    var born = new Date(t + 'T00:00:00'), today = startOfDay(new Date());
+    var days = Math.round((today.getTime() - born.getTime()) / DAY);
+    if (isNaN(days) || days < 0) return '';
+    if (days < 14) return ' · ' + days + (days === 1 ? ' day old' : ' days old');
+    if (days >= 112) {
+      var m = (today.getFullYear() - born.getFullYear()) * 12 + today.getMonth() - born.getMonth() - (today.getDate() < born.getDate() ? 1 : 0);
+      return ' · ' + m + ' months old';
+    }
+    var w = Math.floor(days / 7), d = days % 7;
+    return ' · ' + w + ' weeks' + (d ? ' ' + d + 'd' : ' old');
+  }
+
+  function renderPip(now) {
+    var on = pipOn();
+    document.body.classList.toggle('has-pip', on);
+    show(el.feedBtn, on); show(el.logBtn, on && logOn());
+    if (!on) { pip.fast = false; return; }
+    var v = pipView(now), main = $('p-main');
+    el.pip.classList.toggle('stale', !!v.stale);
+    main.classList.toggle('msg', !!v.msg);
+    if (v.msg) {
+      main.classList.add('alert');
+      setText($('p-k'), 'Pip'); setText($('p-v'), v.msg); setText($('p-s'), v.sub);
+      show($('p-i2'), false); show($('p-i3'), false); show($('p-i4'), false);
+      pip.fast = false;
+      return;
+    }
+    main.classList.toggle('alert', !!v.stale);
+    setText($('p-k'), v.main.k); setText($('p-v'), v.main.v); setText($('p-s'), v.main.s);
+    show($('p-i2'), !!v.side);
+    if (v.side) { setText($('p-k2'), v.side.k); setText($('p-v2'), v.side.v); setText($('p-s2'), v.side.s); }
+    show($('p-i3'), true);
+    setText($('p-v3'), v.c24.v); setText($('p-s3'), v.c24.s);
+    show($('p-i4'), !!v.sleep);
+    if (v.sleep) { setText($('p-k4'), v.sleep.k); setText($('p-v4'), v.sleep.v); setText($('p-s4'), v.sleep.s); }
+    pip.fast = v.run;
+  }
+
+  // ---------- logging to Pip ----------
+  // The Echo writes to Pip the way a phone does: each entry has an id, goes in an outbox, and is
+  // sent to Pip's sync address until Pip confirms it. The outbox is kept on this device, so a
+  // dropped Wi-Fi connection loses nothing. Entries are saved whole, so fields written by other
+  // phones are never lost, and the newest edit wins (same as in Pip).
+  function logOn() { return pipOn() && settings.pip.log !== false; }
+  // Not before the first update from Pip, so a feed already running on a phone is never missed.
+  function logReady() { return logOn() && pip.at > 0 && pip.status !== 'pass' && pip.status !== 'address'; }
+  function logBy() { return String(settings.pip.by || '').trim() || 'Nursery screen'; }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+  function pipLive(type) {
+    var best = null;
+    Object.keys(pip.entries).forEach(function (id) {
+      var e = pip.entries[id];
+      if (e && !e.deleted && e.running && e.type === type && (!best || e.start > best.start)) best = e;
+    });
+    return best;
+  }
+  function pipLast(type) {
+    var best = null;
+    Object.keys(pip.entries).forEach(function (id) {
+      var e = pip.entries[id];
+      if (e && !e.deleted && e.type === type && (!best || e.start > best.start)) best = e;
+    });
+    return best;
+  }
+  function refresh() { render(); if (Feed.on) Feed.paint(); if (Log.on) Log.paint(); }
+  function pipSoon() { clearTimeout(pip.soon); pip.soon = setTimeout(pipLoad, 400); }
+
+  // Save one entry locally and queue it to send.
+  function pipPut(e) {
+    e.updated = Math.max(Date.now(), (e.updated || 0) + 1);   // always newer than the copy it replaces
+    e.by = e.by || logBy();
+    pip.entries[e.id] = e;
+    pip.outbox[e.id] = true;
+    pipStore();
+    refresh();
+    pipSoon();
+    return e;
+  }
+
+  // Wrap one tap: run fn(api), remember what changed so it can be undone, show the toast.
+  // fn returns the words for the toast.
+  var undo = null, toastTimer = null;
+  function doLog(fn) {
+    var items = [];
+    var api = {
+      add: function (type, fields) {
+        var e = { id: uid(), type: type, start: Date.now(), deleted: false };
+        for (var k in fields) e[k] = fields[k];
+        items.push({ id: e.id, prev: null });
+        return pipPut(e);
+      },
+      edit: function (e, change) {
+        items.push({ id: e.id, prev: JSON.stringify(e) });
+        change(e);
+        return pipPut(e);
+      }
+    };
+    var label = fn(api);
+    undo = { items: items };
+    toast(label, true);
+  }
+  function toast(msg, canUndo) {
+    setText($('lt-msg'), msg);
+    show($('lt-undo'), !!canUndo && !!undo);
+    el.logToast.classList.toggle('red', document.body.classList.contains('night') || Feed.on);
+    el.logToast.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.logToast.classList.remove('on'); undo = null; }, canUndo ? 8000 : 2500);
+  }
+  function undoLast() {
+    if (!undo) return;
+    var u = undo; undo = null;
+    u.items.forEach(function (it) {
+      var cur = pip.entries[it.id];
+      if (!cur) return;
+      var back = it.prev ? JSON.parse(it.prev) : cur;
+      if (!it.prev) back.deleted = true;
+      back.updated = cur.updated;
+      pipPut(back);
+    });
+    toast('Undone', false);
+  }
+
+  // Before changing something that is already running, take a fresh look at Pip (up to ~2 seconds)
+  // so a change made on a phone a moment ago is not overwritten.
+  function fresh(fn) {
+    if (!navigator.onLine || Date.now() - pip.at < 8000) { fn(); return; }
+    var done = false;
+    function go() { if (!done) { done = true; fn(); } }
+    setTimeout(go, 1800);
+    Promise.resolve(pipLoad()).then(go, go);
+  }
+
+  function nextSideNow() { return pipStats(Date.now()).next || 'left'; }
+  function startBreast(side) {
+    if (!logReady()) return;
+    fresh(function () {
+      if (pipLive('breast')) { toast('A feed is already running', false); refresh(); return; }
+      var now = Date.now(), made;
+      doLog(function (a) {
+        made = a.add('breast', { start: now, side: side, lastSide: side, sideStart: now, leftMs: 0, rightMs: 0, running: true, end: null });
+        return 'Feeding, ' + side + ' side';
+      });
+      pip.seenRun = made.id;
+      if (!Feed.on && modeNow(new Date()) === 'night') { Log.close(); Feed.open(); }
+      else if (Feed.on) Log.close();
+    });
+  }
+  function switchSide(side) {
+    if (!logReady()) return;
+    fresh(function () {
+      var e = pipLive('breast');
+      if (!e || e.side === side) return;
+      var now = Date.now();
+      doLog(function (a) {
+        a.edit(e, function (x) {
+          var spent = now - (x.sideStart || now);
+          if (x.side === 'left') x.leftMs = (x.leftMs || 0) + spent;
+          if (x.side === 'right') x.rightMs = (x.rightMs || 0) + spent;
+          x.side = side; x.lastSide = side; x.sideStart = now;
+        });
+        return 'Switched to ' + side;
+      });
+    });
+  }
+  function stopFeed() {
+    if (!logReady()) return;
+    fresh(function () {
+      var e = pipLive('breast');
+      if (!e) return;
+      var now = Date.now();
+      doLog(function (a) {
+        a.edit(e, function (x) {
+          if (x.sideStart) {
+            var spent = now - x.sideStart;
+            if (x.side === 'left') x.leftMs = (x.leftMs || 0) + spent;
+            if (x.side === 'right') x.rightMs = (x.rightMs || 0) + spent;
+          }
+          x.sideStart = null; x.end = now; x.running = false;
+        });
+        return 'Feed saved, ' + pdur((e.leftMs || 0) + (e.rightMs || 0));
+      });
+    });
+  }
+  function toggleSleep() {
+    if (!logReady()) return;
+    fresh(function () {
+      var s = pipLive('sleep'), now = Date.now();
+      doLog(function (a) {
+        if (s) { a.edit(s, function (x) { x.end = now; x.running = false; }); return 'Sleep saved, ' + pdur(now - s.start); }
+        a.add('sleep', { start: now, running: true, end: null });
+        return 'Sleep started';
+      });
+    });
+  }
+  function startPump() {
+    if (!logReady()) return;
+    fresh(function () {
+      if (pipLive('pump')) { Log.open('pump'); return; }
+      doLog(function (a) { a.add('pump', { running: true, end: null, leftMl: 0, rightMl: 0 }); return 'Pump started'; });
+    });
+  }
+  function finishPump(withMl) {
+    var e = pipLive('pump');
+    if (!e) { Log.view = 'main'; Log.paint(); return; }
+    var now = Date.now();
+    doLog(function (a) {
+      a.edit(e, function (x) {
+        x.end = now; x.running = false;
+        if (withMl) { x.leftMl = Log.pl; x.rightMl = Log.pr; }
+      });
+      return 'Pump saved';
+    });
+    Log.view = 'main'; Log.paint();
+  }
+  function saveBottle() {
+    var ago = Log.off * MIN, ml = Log.ml, kind = Log.kind;
+    doLog(function (a) { a.add('bottle', { start: Date.now() - ago, ml: ml, kind: kind }); return 'Bottle, ' + ml + ' mL'; });
+    Log.view = 'main'; Log.paint();
+  }
+  function saveNappy(kind) {
+    var ago = Log.off * MIN;
+    doLog(function (a) {
+      a.add('nappy', { start: Date.now() - ago, wet: kind !== 'dirty', dirty: kind !== 'wet' });
+      return 'Nappy, ' + (kind === 'both' ? 'wet and dirty' : kind);
+    });
+    Log.view = 'main'; Log.paint();
+  }
+  function deleteEntry(id) {
+    var e = pip.entries[id];
+    if (!e) return;
+    doLog(function (a) { a.edit(e, function (x) { x.deleted = true; }); return 'Deleted'; });
+  }
+
+  function describe(e) {
+    var d;
+    switch (e.type) {
+      case 'breast':
+        d = e.running ? 'feeding now' : pdur((e.leftMs || 0) + (e.rightMs || 0)) +
+          (e.leftMs ? ' · L ' + pdur(e.leftMs) : '') + (e.rightMs ? ' · R ' + pdur(e.rightMs) : '');
+        return { t: 'Breast feed', d: d };
+      case 'bottle':
+        return { t: 'Bottle', d: (e.ml || 0) + ' mL' + (e.kind ? ' · ' + e.kind : '') };
+      case 'nappy':
+        return { t: 'Nappy', d: e.wet && e.dirty ? 'wet and dirty' : (e.dirty ? 'dirty' : 'wet') };
+      case 'sleep':
+        return { t: 'Sleep', d: e.running ? 'asleep now' : (e.end ? pdur(e.end - e.start) : '') };
+      case 'pump':
+        d = (e.leftMl || 0) + (e.rightMl || 0);
+        return { t: 'Pump', d: e.running ? 'pumping now' : (d ? d + ' mL' : (e.end ? pdur(e.end - e.start) : '')) };
+      case 'med': return { t: 'Medicine', d: e.name || '' };
+      case 'growth': return { t: 'Growth', d: '' };
+      case 'note': return { t: 'Note', d: String(e.text || '').slice(0, 40) };
+      default: return { t: String(e.type || 'Entry'), d: '' };
+    }
+  }
+
+  function logStatus() {
+    var n = Object.keys(pip.outbox).length;
+    if (pip.status === 'pass') return 'Passcode doesn’t match, nothing is being sent';
+    if (pip.status === 'address') return 'Can’t find Pip, nothing is being sent';
+    if (n) return pip.busy ? 'Sending…' : n + ' waiting to send' + (pip.status === 'offline' ? ', no connection' : '');
+    if (!pip.at) return 'Connecting to Pip…';
+    return pip.status === 'offline' ? 'No connection, showing the last update' : 'Saved to Pip';
+  }
+
+  var OFFS = [[0, 'Now'], [5, '5 min ago'], [10, '10 min ago'], [20, '20 min ago'], [30, '30 min ago'], [60, '1 hour ago']];
+  function chipRow(act, list, cur) {
+    return list.map(function (c) {
+      return '<button class="chip' + (String(c[0]) === String(cur) ? ' on' : '') + '" data-lg="' + act + '" data-v="' + c[0] + '">' + c[1] + '</button>';
+    }).join('');
+  }
+  function stepper(label, key, val) {
+    return '<div class="lg-step"><span class="lbl">' + label + '</span>' +
+      '<button class="lg-sq" data-lg="step" data-k="' + key + '" data-v="-10" aria-label="Less ' + label + '">−</button>' +
+      '<span class="lg-val">' + val + '<em>mL</em></span>' +
+      '<button class="lg-sq" data-lg="step" data-k="' + key + '" data-v="10" aria-label="More ' + label + '">+</button></div>';
+  }
+
+  var Log = {
+    on: false, view: 'main', off: 0, ml: 60, kind: 'expressed', pl: 0, pr: 0, confirm: null, html: '', idle: null, confirmTimer: null,
+    open: function (view) {
+      this.view = view || 'main'; this.on = true; this.confirm = null; this.html = ''; this.off = 0;
+      if (this.view === 'bottle') {
+        var last = pipLast('bottle');
+        this.ml = last && last.ml > 0 ? Math.min(400, last.ml) : 60;
+        this.kind = last && last.kind === 'formula' ? 'formula' : 'expressed';
+      }
+      if (this.view === 'pump') {
+        var p = pipLive('pump');
+        this.pl = p ? (p.leftMl || 0) : 0; this.pr = p ? (p.rightMl || 0) : 0;
+      }
+      el.log.classList.add('on');
+      this.poke(); this.paint();
+    },
+    close: function () {
+      this.on = false; clearTimeout(this.idle); clearTimeout(this.confirmTimer);
+      el.log.classList.remove('on');
+      render();
+    },
+    poke: function () { clearTimeout(this.idle); this.idle = setTimeout(function () { Log.close(); }, 3 * MIN); },
+    main: function () {
+      var ready = logReady(), now = Date.now(), run = ready ? pipLive('breast') : null, s = pipStats(now);
+      var next = s.next || 'left', sleep = pipLive('sleep'), pump = pipLive('pump'), dis = ready ? '' : ' disabled', h = '';
+      h += '<div class="logp-cols"><div>';
+      if (!ready) {
+        h += '<p class="hint">' + (pip.status === 'pass' ? 'The passcode doesn’t match the one in Pip. Check it in Settings.'
+          : pip.status === 'address' ? 'No Pip found at that address. Check it in Settings.'
+          : 'Waiting for Pip to answer before logging, so a feed already running on a phone isn’t missed.') + '</p>';
+      }
+      if (run) h += '<p class="lg-k">Feeding now <b id="lg-run"></b></p>';
+      ['left', 'right'].forEach(function (side) {
+        var cur = run && run.side === side, w = side === 'left' ? 'Left' : 'Right';
+        if (side === 'left') h += '<div class="lg-row">';
+        h += '<button class="lg-tile big' + (cur ? ' on' : '') + (!run && next === side ? ' next' : '') + '" data-lg="side" data-v="' + side + '"' + dis + '>' + w +
+          '<small>' + (run ? (cur ? 'Now on · <span id="lg-t' + side[0] + '"></span>' : 'Switch · <span id="lg-t' + side[0] + '"></span>')
+            : (next === side ? 'Next side' : 'Start')) + '</small></button>';
+        if (side === 'right') h += '</div>';
+      });
+      if (run) h += '<div class="lg-row"><button class="lg-tile solid" data-lg="stop"' + dis + '>Stop feed</button></div>';
+      h += '<div class="lg-row four">' +
+        '<button class="lg-tile" data-lg="view" data-v="bottle"' + dis + '>Bottle<small>Log one</small></button>' +
+        '<button class="lg-tile" data-lg="view" data-v="nappy"' + dis + '>Nappy<small>Log one</small></button>' +
+        '<button class="lg-tile' + (sleep ? ' on' : '') + '" data-lg="sleep"' + dis + '>' + (sleep ? 'End sleep' : 'Sleep') + '<small>' + (sleep ? '<span id="lg-sl"></span>' : 'Start') + '</small></button>' +
+        '<button class="lg-tile' + (pump ? ' on' : '') + '" data-lg="pump"' + dis + '>' + (pump ? 'Stop pump' : 'Pump') + '<small>' + (pump ? '<span id="lg-pm"></span>' : 'Start') + '</small></button>' +
+        '</div></div><div class="lg-recent"><h3>Recent</h3>';
+      var list = [];
+      Object.keys(pip.entries).forEach(function (id) { var e = pip.entries[id]; if (e && !e.deleted && +e.start) list.push(e); });
+      list.sort(function (a, b) { return b.start - a.start; });
+      list.slice(0, 6).forEach(function (e) {
+        var d = describe(e), sure = Log.confirm === e.id;
+        h += '<div class="lg-item"><span><b>' + esc(d.t) + '</b>' + (d.d ? ' · ' + esc(d.d) : '') + '<small>' + clockText(new Date(e.start)) + (e.by ? ' · ' + esc(e.by) : '') + '</small></span>' +
+          '<button class="' + (sure ? 'sure' : '') + '" data-lg="del" data-v="' + esc(e.id) + '" aria-label="Delete">' + (sure ? 'Delete?' : '×') + '</button></div>';
+      });
+      if (!list.length) h += '<p class="hint">Nothing logged yet.</p>';
+      return h + '</div></div>';
+    },
+    sub: function () {
+      var v = this.view, h = '<div class="lg-sub">';
+      if (v === 'bottle') {
+        h += '<h3>Bottle</h3><div class="lg-step"><button class="lg-sq" data-lg="step" data-k="ml" data-v="-10" aria-label="Less">−</button>' +
+          '<span class="lg-val">' + this.ml + '<em>mL</em></span><button class="lg-sq" data-lg="step" data-k="ml" data-v="10" aria-label="More">+</button></div>' +
+          '<div class="row">' + chipRow('mlset', [[30, '30'], [60, '60'], [90, '90'], [120, '120'], [150, '150']], this.ml) + '</div>' +
+          '<div class="row">' + chipRow('kind', [['expressed', 'Expressed'], ['formula', 'Formula']], this.kind) + '</div>' +
+          '<div class="row"><span class="lbl">When</span>' + chipRow('off', OFFS, this.off) + '</div>' +
+          '<div class="lg-row"><button class="lg-tile" data-lg="back">Cancel</button><button class="lg-tile solid" data-lg="savebottle">Save bottle</button></div>';
+      } else if (v === 'nappy') {
+        h += '<h3>Nappy</h3><div class="row"><span class="lbl">When</span>' + chipRow('off', OFFS, this.off) + '</div>' +
+          '<p class="hint">Tap one to log it straight away.</p>' +
+          '<div class="lg-row"><button class="lg-tile big" data-lg="nappy" data-v="wet">Wet</button><button class="lg-tile big" data-lg="nappy" data-v="dirty">Dirty</button>' +
+          '<button class="lg-tile big" data-lg="nappy" data-v="both">Both</button></div>' +
+          '<div class="lg-row"><button class="lg-tile" data-lg="back">Cancel</button></div>';
+      } else if (v === 'pump') {
+        var p = pipLive('pump');
+        h += '<h3>Pump finished</h3><p class="hint">' + (p ? pdur(Date.now() - p.start) + ' from ' + clockText(new Date(p.start)) + '. ' : '') + 'How much came out? Skip if you didn’t measure.</p>' +
+          stepper('Left', 'pl', this.pl) + stepper('Right', 'pr', this.pr) +
+          '<div class="lg-row"><button class="lg-tile" data-lg="back">Back</button><button class="lg-tile" data-lg="pumpskip">Skip</button><button class="lg-tile solid" data-lg="pumpsave">Save</button></div>';
+      }
+      return h + '</div>';
+    },
+    paint: function () {
+      if (!this.on) return;
+      var html = this.view === 'main' ? this.main() : this.sub();
+      if (html !== this.html) { el.lgBody.innerHTML = html; this.html = html; }
+      setText(el.lgSync, logStatus());
+      this.tick();
+    },
+    // Only the running timers change second to second, so only their text is touched
+    // (replacing the buttons mid-tap would swallow the tap).
+    tick: function () {
+      if (!this.on || this.view !== 'main') return;
+      var now = Date.now(), run = pipLive('breast'), sleep = pipLive('sleep'), pump = pipLive('pump');
+      function put(id, t) { var n = $(id); if (n) setText(n, t); }
+      if (run) {
+        put('lg-run', pclock(now - run.start));
+        put('lg-tl', pclock((run.leftMs || 0) + (run.side === 'left' && run.sideStart ? now - run.sideStart : 0)));
+        put('lg-tr', pclock((run.rightMs || 0) + (run.side === 'right' && run.sideStart ? now - run.sideStart : 0)));
+      }
+      if (sleep) put('lg-sl', pdur(now - sleep.start));
+      if (pump) put('lg-pm', pdur(now - pump.start));
+    }
+  };
+
+  el.log.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-lg]') : null;
+    if (!b || b.disabled) return;
+    Log.poke();
+    var a = b.getAttribute('data-lg'), v = b.getAttribute('data-v'), k = b.getAttribute('data-k');
+    if (a === 'done') { Log.close(); return; }
+    if (a === 'side') { var run = pipLive('breast'); if (run) switchSide(v); else startBreast(v); return; }
+    if (a === 'stop') { stopFeed(); return; }
+    if (a === 'sleep') { toggleSleep(); return; }
+    if (a === 'pump') { startPump(); return; }
+    if (a === 'view') { Log.open(v); return; }
+    if (a === 'back') { Log.view = 'main'; Log.paint(); return; }
+    if (a === 'step') {
+      var cap = k === 'ml' ? 400 : 500;
+      Log[k] = clamp((Log[k] || 0) + (+v), 0, cap);
+    } else if (a === 'mlset') Log.ml = +v;
+    else if (a === 'kind') Log.kind = v;
+    else if (a === 'off') Log.off = +v;
+    else if (a === 'savebottle') { saveBottle(); return; }
+    else if (a === 'nappy') { saveNappy(v); return; }
+    else if (a === 'pumpsave') { finishPump(true); return; }
+    else if (a === 'pumpskip') { finishPump(false); return; }
+    else if (a === 'del') {
+      if (Log.confirm === v) { Log.confirm = null; deleteEntry(v); return; }
+      Log.confirm = v;
+      clearTimeout(Log.confirmTimer);
+      Log.confirmTimer = setTimeout(function () { Log.confirm = null; Log.paint(); }, 4000);
+    }
+    Log.paint();
+  });
+  $('lt-undo').addEventListener('click', undoLast);
+
+  // ---------- night feed screen ----------
+  var feedKey = '';
+  var Feed = {
+    on: false, idle: null, actKey: '',
+    open: function () { this.on = true; el.feed.classList.add('on'); this.actKey = ''; this.poke(); this.paint(); },
+    close: function () { this.on = false; clearTimeout(this.idle); el.feed.classList.remove('on'); render(); },
+    poke: function () { clearTimeout(this.idle); this.idle = setTimeout(function () { Feed.close(); }, 30 * MIN); },
+    paint: function () {
+      var now = new Date(), v = pipView(now), ready = logReady();
+      setText($('f-clock'), clockText(now));
+      setText($('f-env'), lastEnv ? lastEnv.k + ' ' + lastEnv.t.toFixed(1) + '° · ' + lastEnv.tog + ' TOG' : '');
+      el.feed.classList.toggle('msg', !!v.msg);
+      show($('f-sides'), !ready);
+      this.paintAct(v, ready);
+      if (v.msg) {
+        setText($('f-k'), 'Pip'); setText($('f-v'), v.msg); setText($('f-s'), v.sub);
+        setText($('f-foot-l'), ''); setText($('f-foot-r'), '');
+        if (feedKey !== 'msg') { $('f-sides').innerHTML = ''; feedKey = 'msg'; }
+        return;
+      }
+      setText($('f-k'), v.main.k); setText($('f-v'), v.main.v); setText($('f-s'), v.main.s);
+      var html = v.pills ? v.pills.map(function (p) { return '<span class="feed-side' + (p.on ? ' next' : '') + '">' + p.t + '</span>'; }).join('') : '';
+      if (html !== feedKey) { $('f-sides').innerHTML = html; feedKey = html; }
+      setText($('f-foot-l'), v.c24.v + ' · ' + v.c24.s);
+      setText($('f-foot-r'), v.sleep ? v.sleep.k + ' ' + v.sleep.v : '');
+    },
+    // Big buttons under the timer: start or switch a side, stop, or log a nappy, bottle or sleep.
+    paintAct: function (v, ready) {
+      var box = $('f-act'), run = ready && !v.msg ? pipLive('breast') : null, sleep = ready ? pipLive('sleep') : null;
+      var key = !ready || v.msg ? 'off' : run ? 'run|' + run.id + '|' + run.side : 'idle|' + nextSideNow() + '|' + (sleep ? 1 : 0);
+      if (key !== this.actKey) {
+        this.actKey = key;
+        var h = '';
+        if (key !== 'off') {
+          var next = nextSideNow();
+          ['left', 'right'].forEach(function (side) {
+            var w = side === 'left' ? 'Left' : 'Right';
+            h += '<button class="fa' + (run && run.side === side ? ' cur' : '') + (!run && next === side ? ' next' : '') + '" data-fa="side" data-v="' + side + '">' + w +
+              '<small>' + (run ? '<span id="fa-t' + side[0] + '"></span>' : (next === side ? 'Next' : '&nbsp;')) + '</small></button>';
+          });
+          if (run) h += '<button class="fa stop" data-fa="stop">Stop feed<small>&nbsp;</small></button>';
+          else h += '<button class="fa" data-fa="nappy">Nappy<small>&nbsp;</small></button>' +
+            '<button class="fa" data-fa="bottle">Bottle<small>&nbsp;</small></button>' +
+            '<button class="fa' + (sleep ? ' cur' : '') + '" data-fa="sleep">' + (sleep ? 'End sleep' : 'Sleep') + '<small>' + (sleep ? '<span id="fa-sl"></span>' : '&nbsp;') + '</small></button>';
+        }
+        box.innerHTML = h;
+        box.classList.toggle('on', key !== 'off');
+      }
+      if (run) {
+        var ms = Date.now(), n;
+        if ((n = $('fa-tl'))) setText(n, pclock((run.leftMs || 0) + (run.side === 'left' && run.sideStart ? ms - run.sideStart : 0)));
+        if ((n = $('fa-tr'))) setText(n, pclock((run.rightMs || 0) + (run.side === 'right' && run.sideStart ? ms - run.sideStart : 0)));
+      }
+      if (sleep && (n = $('fa-sl'))) setText(n, pdur(Date.now() - sleep.start));
+    }
+  };
+  el.feed.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-fa]') : null;
+    Feed.poke();
+    if (!b) { Feed.close(); return; }          // anywhere else goes back
+    var a = b.getAttribute('data-fa'), v = b.getAttribute('data-v');
+    if (a === 'side') { if (pipLive('breast')) switchSide(v); else startBreast(v); }
+    else if (a === 'stop') stopFeed();
+    else if (a === 'nappy') Log.open('nappy');
+    else if (a === 'bottle') Log.open('bottle');
+    else if (a === 'sleep') toggleSleep();
+  });
+
+  // ---------- Pip settings ----------
+  function syncPip() {
+    show($('testSet'), !podMode);
+    if (!pip.dirty) {
+      el.pipHost.value = settings.pip.host || ''; el.pipPass.value = settings.pip.pass || ''; el.pipDob.value = settings.pip.dob || '';
+      el.pipBy.value = settings.pip.by || '';
+    }
+    $('pipAuto').classList.toggle('on', !!settings.pip.auto);
+    $('pipLog').classList.toggle('on', settings.pip.log !== false);
+    syncPipStatus();
+  }
+  function syncPipStatus() {
+    var t;
+    if (!pipOn()) t = 'Not connected.';
+    else if (pip.status === 'ok') t = 'Connected. Last updated ' + clockText(new Date(pip.at)) + '.';
+    else if (pip.status === 'pass') t = 'The passcode doesn’t match the one in Pip.';
+    else if (pip.status === 'address') t = 'No Pip found at that address.';
+    else if (pip.status === 'offline') t = 'Can’t reach Pip. Check the Wi-Fi.';
+    else if (pip.status === 'error') t = 'That address answered, but it doesn’t look like Pip. Check it.';
+    else t = 'Connecting…';
+    setText(el.pipStatus, t);
+  }
+  function pipConnect() {
+    settings.pip.host = el.pipHost.value.trim();
+    settings.pip.pass = el.pipPass.value;
+    settings.pip.dob = el.pipDob.value || '';
+    settings.pip.by = el.pipBy.value.trim() || 'Nursery screen';
+    pip.dirty = false;
+    saveSettings();
+    var origin = pipOrigin();
+    if (origin && origin !== pip.origin) pipReset(origin); else pip.status = 'idle';
+    syncSettings(); render(); pipLoad();
+  }
+  function pipDisconnect() {
+    settings.pip.host = ''; settings.pip.pass = '';
+    pip.dirty = false;
+    saveSettings();
+    pipReset(null);
+    syncSettings(); render();
+  }
+  ['pipHost', 'pipPass', 'pipDob', 'pipBy'].forEach(function (id) {
+    el[id].addEventListener('input', function () { pip.dirty = true; });
+  });
+  el.pipHost.addEventListener('keydown', function (e) { if (e.key === 'Enter') pipConnect(); });
+  el.pipPass.addEventListener('keydown', function (e) { if (e.key === 'Enter') pipConnect(); });
+
   // ---------- upkeep ----------
   // Shift everything a few pixels every couple of minutes so nothing sits still on the screen for months.
   function nudge() {
     var dx = Math.round(Math.random() * 8 - 4), dy = Math.round(Math.random() * 8 - 4);
     el.stage.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+    el.feedInner.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
   }
   // When a new version is published (GitHub to Netlify), reload to pick it up, but only in the
   // day look with nothing playing or open, so it never interrupts the night.
@@ -1196,20 +2103,24 @@ body.night .sound span{color:var(--amber-dim)}
       var tag = r.headers.get('etag') || r.headers.get('last-modified');
       if (!r.ok || !tag) return;
       if (pageTag === null) { pageTag = tag; return; }
-      var busy = Sound.playing || Light.on || openOverlay || el.controls.classList.contains('show');
+      var busy = Sound.playing || Light.on || Feed.on || Log.on || openOverlay || el.controls.classList.contains('show');
       if (tag !== pageTag && !busy && modeNow(new Date()) === 'day') location.reload();
     }).catch(function () { /* offline; try again later */ });
   }
 
   document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) render(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { render(); pipLoad(); } });
+  window.addEventListener('online', function () { loadWeather(); loadAir(); pipLoad(); });
 
   render();
   loadWeather();
   loadAir();
   readPod();
+  pipLoad();
   checkForUpdate();
   setInterval(render, 5000);
+  setInterval(pipLoad, 15000);
+  setInterval(function () { if (pip.fast) renderPip(new Date()); if (Feed.on) Feed.paint(); if (Log.on) Log.tick(); }, 1000);
   setInterval(loadWeather, 15 * 60000);
   setInterval(loadAir, 30 * 60000);
   if (podMode) setInterval(readPod, 30000);

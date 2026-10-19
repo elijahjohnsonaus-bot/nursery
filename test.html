@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Echo hardware test</title>
+<!--
+  Hardware test for the Echo Show running LineageOS and Fully Kiosk.
+  Checks the screen, touch, speaker, microphone, camera, speech and storage, and shows what Fully
+  makes available to the page. Nothing here is sent anywhere. Open it from Settings in the nursery
+  screen, or go to /test.html on the same address.
+-->
+<style>
+:root{--ink:#1D2935; --soft:#485665; --line:#C9D1D8; --bg:#F3F6F8; --card:#FFFFFF; --ok:#1F7A45; --bad:#A8371F; --accent:#2E72B2}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0; font:18px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg)}
+.wrap{max-width:1000px; margin:0 auto; padding:16px 20px 60px}
+h1{font-size:30px; margin:14px 0 4px}
+h2{font-size:22px; margin:0 0 6px}
+p{margin:6px 0}
+.soft{color:var(--soft)}
+a.btn, button{font:inherit; color:inherit}
+.btn, button{display:inline-block; background:var(--card); border:2px solid var(--ink); border-radius:12px; padding:12px 20px; margin:6px 10px 6px 0; min-height:52px; text-decoration:none; cursor:pointer}
+button.primary{background:var(--ink); color:#fff}
+button.good{border-color:var(--ok); color:var(--ok)}
+button.bad{border-color:var(--bad); color:var(--bad)}
+.card{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 20px; margin:16px 0}
+.pill{display:inline-block; border-radius:999px; padding:2px 12px; font-size:15px; font-weight:600; background:#E4E9ED; color:var(--soft); margin-left:8px; vertical-align:middle}
+.pill.ok{background:#D9F0E2; color:var(--ok)} .pill.bad{background:#F6DAD3; color:var(--bad)}
+pre{margin:8px 0 0; padding:12px 14px; background:#101820; color:#E8EEF2; border-radius:10px; white-space:pre-wrap; word-break:break-word; font:16px/1.5 ui-monospace,Menlo,Consolas,monospace}
+.meter{height:26px; border:2px solid var(--ink); border-radius:8px; overflow:hidden; margin:10px 0; background:#fff}
+.meter i{display:block; height:100%; width:0; background:var(--accent); transition:width .08s linear}
+canvas{display:block; width:100%; height:200px; border:2px dashed var(--ink); border-radius:12px; background:#fff; touch-action:none}
+video{width:100%; max-width:480px; border-radius:12px; background:#000; display:none}
+audio{display:none; width:100%; margin-top:8px}
+#colour{position:fixed; top:0; right:0; bottom:0; left:0; z-index:50; display:none; align-items:flex-end; justify-content:center; color:#888; font-size:20px; padding-bottom:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="btn" href="./">Back to nursery</a>
+  <h1>Echo hardware test</h1>
+  <p class="soft">Tap each Run button. The Echo&rsquo;s touch can be slow, so give it a second. Everything stays on this device.</p>
+
+  <section class="card" id="summary">
+    <h2>Results so far</h2>
+    <p class="soft">Read these out or send a photo of this box.</p>
+    <pre id="results">Nothing run yet.</pre>
+  </section>
+
+  <section class="card">
+    <h2>This device <span class="pill" id="p-device"></span></h2>
+    <pre id="deviceText"></pre>
+  </section>
+
+  <section class="card">
+    <h2>Fully Kiosk <span class="pill" id="p-fully"></span></h2>
+    <p class="soft">What Fully shows to the page. The JavaScript Interface must be turned on in Fully (a PLUS feature) for most of these.</p>
+    <pre id="fullyText"></pre>
+    <button id="fullySpeak" hidden>Speak with Fully</button>
+  </section>
+
+  <section class="card">
+    <h2>Screen <span class="pill" id="p-screen"></span></h2>
+    <p class="soft">Fills the screen with solid colours. Tap to step through. Look for dots that don&rsquo;t change or a colour tint.</p>
+    <button class="primary" id="runScreen">Run colour check</button>
+  </section>
+
+  <section class="card">
+    <h2>Touch <span class="pill" id="p-touch"></span></h2>
+    <p class="soft">Draw in the box, and try two fingers at once.</p>
+    <canvas id="pad"></canvas>
+    <button id="clearPad">Clear</button> <span id="touchText" class="soft"></span>
+  </section>
+
+  <section class="card">
+    <h2>Speaker <span class="pill" id="p-speaker"></span></h2>
+    <p class="soft">Turn the Echo&rsquo;s volume up a bit first.</p>
+    <button class="primary" id="tone">Play tone</button>
+    <button id="toneL">Left only</button>
+    <button id="toneR">Right only</button>
+    <button id="noise">Play noise</button>
+    <p>Did you hear it?
+      <button class="good" data-say="speaker-yes">Yes</button><button class="bad" data-say="speaker-no">No</button></p>
+    <p class="soft" id="audioText"></p>
+  </section>
+
+  <section class="card">
+    <h2>Microphone <span class="pill" id="p-mic"></span></h2>
+    <p class="soft">Runs for 8 seconds. Clap or talk near the Echo. The bar should move.</p>
+    <button class="primary" id="runMic">Run microphone</button>
+    <div class="meter"><i id="meter"></i></div>
+    <p class="soft" id="micText"></p>
+  </section>
+
+  <section class="card">
+    <h2>Camera <span class="pill" id="p-camera"></span></h2>
+    <p class="soft">Untested on this Echo, so it may well say no.</p>
+    <button class="primary" id="runCam">Start camera</button><button id="stopCam">Stop camera</button>
+    <video id="cam" autoplay muted playsinline></video>
+    <p class="soft" id="camText"></p>
+  </section>
+
+  <section class="card">
+    <h2>Speaking <span class="pill" id="p-speech"></span></h2>
+    <p class="soft">The page speaking out loud (for spoken readouts).</p>
+    <button class="primary" id="speak">Say something</button>
+    <p>Did you hear it?
+      <button class="good" data-say="speech-yes">Yes</button><button class="bad" data-say="speech-no">No</button></p>
+    <p class="soft" id="speechText"></p>
+  </section>
+
+  <section class="card">
+    <h2>Listening <span class="pill" id="p-listen"></span></h2>
+    <p class="soft">Voice commands. Tap Run, then say &ldquo;log a wet nappy&rdquo;.</p>
+    <button class="primary" id="listen">Run listening</button>
+    <p class="soft" id="listenText"></p>
+  </section>
+
+  <section class="card">
+    <h2>Record and play back <span class="pill" id="p-record"></span></h2>
+    <p class="soft">Records 3 seconds from the microphone, then plays it. Needed for your own lullaby or voice message.</p>
+    <button class="primary" id="record">Record 3 seconds</button>
+    <audio id="playback" controls></audio>
+    <p class="soft" id="recordText"></p>
+  </section>
+
+  <section class="card">
+    <h2>Storage and sensors <span class="pill" id="p-misc"></span></h2>
+    <pre id="miscText"></pre>
+  </section>
+</div>
+<div id="colour"></div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  var R = {};   // key -> line for the results box
+  var ORDER = ['device', 'fully', 'screen', 'touch', 'speaker', 'mic', 'camera', 'speech', 'listen', 'record', 'misc'];
+  function result(key, text) {
+    R[key] = text;
+    var lines = [];
+    ORDER.forEach(function (k) { if (R[k]) lines.push(R[k]); });
+    $('results').textContent = lines.length ? lines.join('\n') : 'Nothing run yet.';
+  }
+  function pill(id, kind, text) {
+    var p = $('p-' + id);
+    p.className = 'pill' + (kind ? ' ' + kind : '');
+    p.textContent = text;
+  }
+  function errName(e) { return (e && (e.name || e.error || e.message)) || 'error'; }
+  function secure() { return window.isSecureContext !== false; }
+
+  // ---------- this device ----------
+  function device() {
+    var ua = navigator.userAgent, m = /(?:Chrome|Chromium)\/([\d.]+)/.exec(ua);
+    var lines = [];
+    lines.push('Browser: ' + (m ? 'Chrome engine ' + m[1] : ua) + (/; wv\)/.test(ua) ? ' (WebView)' : ''));
+    lines.push('Android: ' + ((/Android ([\d.]+)/.exec(ua) || [])[1] || 'unknown'));
+    lines.push('Screen: ' + screen.width + 'x' + screen.height + ' at ' + (window.devicePixelRatio || 1) + 'x, page ' + innerWidth + 'x' + innerHeight);
+    lines.push('Touch points: ' + (navigator.maxTouchPoints || 0));
+    lines.push('Secure page (mic and camera need this): ' + (secure() ? 'yes' : 'NO'));
+    lines.push('Online: ' + (navigator.onLine ? 'yes' : 'no'));
+    lines.push('Memory: ' + (navigator.deviceMemory ? navigator.deviceMemory + ' GB' : 'unknown') + ', cores: ' + (navigator.hardwareConcurrency || 'unknown'));
+    lines.push('Time zone: ' + (Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown'));
+    $('deviceText').textContent = lines.join('\n');
+    pill('device', secure() ? 'ok' : 'bad', secure() ? 'secure page' : 'not secure');
+    result('device', 'Device: ' + (m ? 'Chrome ' + m[1].split('.')[0] : 'unknown browser') + ', ' + screen.width + 'x' + screen.height + ', ' + (navigator.maxTouchPoints || 0) + ' touch points, ' + (secure() ? 'secure page' : 'NOT a secure page'));
+  }
+
+  // ---------- Fully ----------
+  var FULLY_CANDIDATES = ['setScreenBrightness', 'getScreenBrightness', 'textToSpeech', 'stopTextToSpeech', 'getBatteryLevel',
+    'getFaceNumber', 'startScreensaver', 'stopScreensaver', 'turnScreenOn', 'turnScreenOff', 'getIp4Address', 'bringToForeground'];
+  function fullyCheck() {
+    var f = window.fully, names = [], k;
+    if (!f) {
+      $('fullyText').textContent = 'No Fully object on this page. Either this is not running inside Fully Kiosk, or the JavaScript Interface is off.';
+      pill('fully', 'bad', 'not found');
+      result('fully', 'Fully: not available to the page (JavaScript Interface off, or not in Fully)');
+      return;
+    }
+    try { for (k in f) names.push(k); } catch (e) { /* ignore */ }
+    FULLY_CANDIDATES.forEach(function (n) { try { if (typeof f[n] === 'function' && names.indexOf(n) < 0) names.push(n); } catch (e) { /* ignore */ } });
+    names.sort();
+    var brightness = names.indexOf('setScreenBrightness') >= 0, tts = names.indexOf('textToSpeech') >= 0;
+    $('fullyText').textContent = 'Functions found: ' + names.length + '\nScreen brightness control: ' + (brightness ? 'yes' : 'no') +
+      '\nText to speech: ' + (tts ? 'yes' : 'no') + (names.length ? '\n\n' + names.join(', ') : '');
+    pill('fully', brightness ? 'ok' : '', names.length + ' functions');
+    result('fully', 'Fully: ' + names.length + ' functions, brightness ' + (brightness ? 'yes' : 'no') + ', speech ' + (tts ? 'yes' : 'no'));
+    if (tts) $('fullySpeak').hidden = false;
+  }
+  $('fullySpeak').addEventListener('click', function () {
+    try { window.fully.textToSpeech('The last feed was two hours ago. Left side next.'); } catch (e) { result('fully', 'Fully speech: error (' + errName(e) + ')'); }
+  });
+
+  // ---------- screen ----------
+  var COLOURS = ['#000000', '#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#808080'], colourAt = -1;
+  function nextColour() {
+    var box = $('colour');
+    colourAt++;
+    if (colourAt >= COLOURS.length) {
+      box.style.display = 'none'; colourAt = -1;
+      pill('screen', 'ok', 'checked'); result('screen', 'Screen: colour check done');
+      return;
+    }
+    box.style.display = 'flex'; box.style.background = COLOURS[colourAt];
+    box.textContent = (colourAt + 1) + ' of ' + COLOURS.length + ', tap for the next colour';
+    box.style.color = COLOURS[colourAt] === '#FFFFFF' ? '#888' : '#AAA';
+  }
+  $('runScreen').addEventListener('click', nextColour);
+  $('colour').addEventListener('click', nextColour);
+
+  // ---------- touch ----------
+  var pad = $('pad'), pctx = pad.getContext('2d'), active = {}, maxTouch = 0, drawn = 0;
+  function sizePad() {
+    var r = pad.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    pad.width = Math.round(r.width * d); pad.height = Math.round(r.height * d);
+    pctx.setTransform(d, 0, 0, d, 0, 0); pctx.lineWidth = 4; pctx.lineCap = 'round'; pctx.strokeStyle = '#1D2935';
+  }
+  sizePad(); window.addEventListener('resize', sizePad);
+  function padXY(e) { var r = pad.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+  pad.addEventListener('pointerdown', function (e) {
+    active[e.pointerId] = padXY(e);
+    var n = Object.keys(active).length;
+    if (n > maxTouch) maxTouch = n;
+    try { pad.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
+    report();
+  });
+  pad.addEventListener('pointermove', function (e) {
+    var last = active[e.pointerId]; if (!last) return;
+    var now = padXY(e);
+    pctx.beginPath(); pctx.moveTo(last.x, last.y); pctx.lineTo(now.x, now.y); pctx.stroke();
+    active[e.pointerId] = now; drawn++;
+  });
+  function up(e) { delete active[e.pointerId]; }
+  pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up);
+  function report() {
+    $('touchText').textContent = 'Most fingers at once so far: ' + maxTouch;
+    pill('touch', 'ok', maxTouch + (maxTouch === 1 ? ' finger' : ' fingers'));
+    result('touch', 'Touch: works, most fingers at once ' + maxTouch);
+  }
+  $('clearPad').addEventListener('click', function () { pctx.clearRect(0, 0, pad.width, pad.height); });
+
+  // ---------- audio out ----------
+  var ac = null;
+  function audio() {
+    if (!ac) { var AC = window.AudioContext || window.webkitAudioContext; if (AC) ac = new AC(); }
+    if (ac && ac.state === 'suspended' && ac.resume) ac.resume();
+    return ac;
+  }
+  function audioInfo() {
+    $('audioText').textContent = ac ? 'Audio engine: ' + ac.state + ', ' + ac.sampleRate + ' Hz' : 'Audio engine not started yet.';
+  }
+  function tone(pan) {
+    var c = audio();
+    if (!c) { result('speaker', 'Speaker: this browser has no audio engine'); pill('speaker', 'bad', 'no audio'); return; }
+    var o = c.createOscillator(), g = c.createGain(), p = c.createStereoPanner ? c.createStereoPanner() : null;
+    o.type = 'sine'; o.frequency.value = 440;
+    g.gain.setValueAtTime(0.0001, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25, c.currentTime + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 1.5);
+    o.connect(g);
+    if (p) { p.pan.value = pan; g.connect(p); p.connect(c.destination); } else g.connect(c.destination);
+    o.start(); o.stop(c.currentTime + 1.6);
+    audioInfo();
+  }
+  function noise() {
+    var c = audio();
+    if (!c) return;
+    var n = c.sampleRate * 3, buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0), last = 0, i;
+    for (i = 0; i < n; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.2; }
+    var s = c.createBufferSource(), g = c.createGain();
+    s.buffer = buf; g.gain.value = 0.3; s.connect(g); g.connect(c.destination); s.start();
+    audioInfo();
+  }
+  $('tone').addEventListener('click', function () { tone(0); });
+  $('toneL').addEventListener('click', function () { tone(-1); });
+  $('toneR').addEventListener('click', function () { tone(1); });
+  $('noise').addEventListener('click', noise);
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-say]') : null;
+    if (!b) return;
+    var say = b.getAttribute('data-say');
+    if (say === 'speaker-yes') { pill('speaker', 'ok', 'heard'); result('speaker', 'Speaker: heard the test sound'); }
+    else if (say === 'speaker-no') { pill('speaker', 'bad', 'silent'); result('speaker', 'Speaker: heard nothing'); }
+    else if (say === 'speech-yes') { pill('speech', 'ok', 'heard'); result('speech', 'Speaking: heard it'); }
+    else if (say === 'speech-no') { pill('speech', 'bad', 'silent'); result('speech', 'Speaking: heard nothing'); }
+  });
+
+  // ---------- microphone ----------
+  var micStream = null;
+  function gum(constraints) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return Promise.reject({ name: secure() ? 'NotSupported' : 'NotSecurePage' });
+    }
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }
+  function stopStream(s) { if (s) s.getTracks().forEach(function (t) { try { t.stop(); } catch (e) { /* ignore */ } }); }
+  $('runMic').addEventListener('click', function () {
+    if (micStream) return;
+    $('micText').textContent = 'Asking for the microphone';
+    gum({ audio: true }).then(function (stream) {
+      micStream = stream;
+      var c = audio(), src = c.createMediaStreamSource(stream), an = c.createAnalyser(), buf, peak = -120, t0 = Date.now();
+      an.fftSize = 1024; src.connect(an); buf = new Float32Array(an.fftSize);
+      var label = stream.getAudioTracks()[0] ? stream.getAudioTracks()[0].label : '';
+      (function loop() {
+        an.getFloatTimeDomainData(buf);
+        var sum = 0, i;
+        for (i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+        var rms = Math.sqrt(sum / buf.length), db = rms > 0 ? 20 * Math.log10(rms) : -120;
+        if (db > peak) peak = db;
+        $('meter').style.width = Math.max(0, Math.min(100, (db + 80) / 80 * 100)) + '%';
+        $('micText').textContent = 'Now ' + Math.round(db) + ' dB, loudest ' + Math.round(peak) + ' dB' + (label ? ' (' + label + ')' : '');
+        if (Date.now() - t0 < 8000) { requestAnimationFrame(loop); return; }
+        stopStream(micStream); micStream = null;
+        if (peak > -55) { pill('mic', 'ok', 'works'); result('mic', 'Microphone: works (loudest ' + Math.round(peak) + ' dB)'); }
+        else { pill('mic', 'bad', 'silent'); result('mic', 'Microphone: opens but hears almost nothing (loudest ' + Math.round(peak) + ' dB)'); }
+      })();
+    }).catch(function (e) {
+      micStream = null;
+      $('micText').textContent = 'Could not use the microphone: ' + errName(e) + '. In Fully, check the web content settings for microphone access, and Android’s permissions for Fully.';
+      pill('mic', 'bad', 'blocked'); result('mic', 'Microphone: blocked or missing (' + errName(e) + ')');
+    });
+  });
+
+  // ---------- camera ----------
+  var camStream = null;
+  $('runCam').addEventListener('click', function () {
+    if (camStream) return;
+    $('camText').textContent = 'Asking for the camera';
+    gum({ video: true }).then(function (stream) {
+      camStream = stream;
+      var v = $('cam'); v.style.display = 'block'; v.srcObject = stream;
+      v.onloadedmetadata = function () {
+        var t = stream.getVideoTracks()[0], st = t && t.getSettings ? t.getSettings() : {};
+        $('camText').textContent = 'Picture ' + v.videoWidth + 'x' + v.videoHeight + (st.frameRate ? ' at ' + Math.round(st.frameRate) + ' fps' : '') + (t && t.label ? ' (' + t.label + ')' : '');
+        pill('camera', 'ok', 'works'); result('camera', 'Camera: works, ' + v.videoWidth + 'x' + v.videoHeight);
+      };
+    }).catch(function (e) {
+      camStream = null;
+      $('camText').textContent = 'Could not use the camera: ' + errName(e);
+      pill('camera', 'bad', 'no'); result('camera', 'Camera: blocked or missing (' + errName(e) + ')');
+    });
+  });
+  $('stopCam').addEventListener('click', function () {
+    stopStream(camStream); camStream = null;
+    var v = $('cam'); v.srcObject = null; v.style.display = 'none';
+  });
+
+  // ---------- speaking ----------
+  function voices() { return window.speechSynthesis ? speechSynthesis.getVoices() : []; }
+  function speechInfo() {
+    if (!('speechSynthesis' in window)) { $('speechText').textContent = 'This browser cannot speak.'; pill('speech', 'bad', 'no'); result('speech', 'Speaking: not available in this browser'); return; }
+    var v = voices();
+    $('speechText').textContent = v.length ? v.length + ' voices installed' : 'No voices installed yet. The Echo may not have a text to speech engine.';
+  }
+  if ('speechSynthesis' in window && speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', speechInfo);
+  $('speak').addEventListener('click', function () {
+    if (!('speechSynthesis' in window)) { speechInfo(); return; }
+    var u = new SpeechSynthesisUtterance('The last feed was two hours ago. Left side next.'), v = voices(), pick = null, i;
+    for (i = 0; i < v.length; i++) if (/^en[-_]AU/i.test(v[i].lang)) { pick = v[i]; break; }
+    for (i = 0; !pick && i < v.length; i++) if (/^en/i.test(v[i].lang)) pick = v[i];
+    if (pick) { u.voice = pick; u.lang = pick.lang; }
+    u.onerror = function (e) { $('speechText').textContent = 'Speaking failed: ' + errName(e); pill('speech', 'bad', 'failed'); result('speech', 'Speaking: failed (' + errName(e) + ')'); };
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+    $('speechText').textContent = (v.length ? v.length + ' voices' : 'no voices listed') + (pick ? ', using ' + pick.name : '');
+  });
+
+  // ---------- listening ----------
+  $('listen').addEventListener('click', function () {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { $('listenText').textContent = 'This browser has no speech recognition.'; pill('listen', 'bad', 'no'); result('listen', 'Listening: not available in this browser'); return; }
+    var r = new SR(), done = false;
+    r.lang = 'en-AU'; r.interimResults = false; r.maxAlternatives = 1;
+    r.onresult = function (e) {
+      done = true; var t = e.results[0][0].transcript;
+      $('listenText').textContent = 'Heard: “' + t + '”'; pill('listen', 'ok', 'works'); result('listen', 'Listening: works, heard “' + t + '”');
+    };
+    r.onerror = function (e) {
+      done = true; $('listenText').textContent = 'Error: ' + errName(e); pill('listen', 'bad', errName(e)); result('listen', 'Listening: error (' + errName(e) + ')');
+    };
+    r.onend = function () { if (!done) { $('listenText').textContent = 'Heard nothing.'; pill('listen', 'bad', 'nothing'); result('listen', 'Listening: started but heard nothing'); } };
+    try { r.start(); $('listenText').textContent = 'Listening for 8 seconds'; setTimeout(function () { try { r.stop(); } catch (e) { /* ignore */ } }, 8000); }
+    catch (e) { $('listenText').textContent = 'Could not start: ' + errName(e); pill('listen', 'bad', 'failed'); result('listen', 'Listening: could not start (' + errName(e) + ')'); }
+  });
+
+  // ---------- record and play ----------
+  $('record').addEventListener('click', function () {
+    if (!window.MediaRecorder) { pill('record', 'bad', 'no'); result('record', 'Record: this browser cannot record'); $('recordText').textContent = 'No MediaRecorder.'; return; }
+    $('recordText').textContent = 'Asking for the microphone';
+    gum({ audio: true }).then(function (stream) {
+      var rec = new MediaRecorder(stream), chunks = [];
+      rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop = function () {
+        stopStream(stream);
+        var blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' }), a = $('playback');
+        a.src = URL.createObjectURL(blob); a.style.display = 'block';
+        var kb = Math.round(blob.size / 1024);
+        $('recordText').textContent = 'Recorded ' + kb + ' KB (' + (rec.mimeType || 'unknown format') + '). Press play above.';
+        if (blob.size > 0) { pill('record', 'ok', 'recorded'); result('record', 'Record: worked, ' + kb + ' KB'); }
+        else { pill('record', 'bad', 'empty'); result('record', 'Record: finished but the recording is empty'); }
+        try { var p = a.play(); if (p && p.catch) p.catch(function () { /* needs a tap */ }); } catch (e) { /* ignore */ }
+      };
+      rec.start(); $('recordText').textContent = 'Recording for 3 seconds, say something';
+      setTimeout(function () { try { rec.stop(); } catch (e) { /* ignore */ } }, 3000);
+    }).catch(function (e) {
+      $('recordText').textContent = 'Could not record: ' + errName(e); pill('record', 'bad', 'blocked'); result('record', 'Record: blocked or missing (' + errName(e) + ')');
+    });
+  });
+
+  // ---------- storage and sensors ----------
+  function misc() {
+    var lines = [], ls = 'no', idb = 'no';
+    try { localStorage.setItem('hwtest', '1'); ls = localStorage.getItem('hwtest') === '1' ? 'yes' : 'no'; localStorage.removeItem('hwtest'); } catch (e) { ls = 'blocked'; }
+    lines.push('Saved settings (localStorage): ' + ls);
+    lines.push('Bigger storage (IndexedDB): ' + (window.indexedDB ? 'yes' : 'no'));
+    lines.push('Offline cache: ' + (window.caches ? 'yes' : 'no') + ', service workers: ' + (navigator.serviceWorker ? 'yes' : 'no'));
+    lines.push('Ambient light sensor: ' + ('AmbientLightSensor' in window ? 'available to pages' : 'not available to pages'));
+    lines.push('Battery info: ' + (navigator.getBattery ? 'yes' : 'no'));
+    lines.push('Wake lock (keep screen on): ' + (navigator.wakeLock ? 'yes' : 'no'));
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then(function (list) {
+        var c = { audioinput: 0, audiooutput: 0, videoinput: 0 };
+        list.forEach(function (d) { if (c[d.kind] !== undefined) c[d.kind]++; });
+        lines.push('Devices the browser can see: ' + c.audioinput + ' microphone, ' + c.audiooutput + ' speaker, ' + c.videoinput + ' camera');
+        $('miscText').textContent = lines.join('\n');
+        result('misc', 'Devices seen: ' + c.audioinput + ' mic, ' + c.audiooutput + ' speaker, ' + c.videoinput + ' camera');
+      }, function () { $('miscText').textContent = lines.join('\n'); });
+    }
+    $('miscText').textContent = lines.join('\n');
+    pill('misc', ls === 'yes' ? 'ok' : 'bad', ls === 'yes' ? 'storage ok' : 'storage problem');
+  }
+
+  device(); fullyCheck(); misc(); speechInfo(); audioInfo();
+})();
+</script>
+</body>
+</html>
