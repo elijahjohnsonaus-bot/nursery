@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nursery">
+<meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
 <title>Nursery</title>
 <!--
   Nursery screen for the Echo Show 8 (LineageOS + Fully Kiosk).
@@ -27,7 +33,13 @@
   Updates: deployed from GitHub via Netlify; the page checks every 5 minutes and reloads
   itself, but only while the day look is showing and nothing is playing.
 
-  Pip (the shared newborn tracker): the Echo asks Pip's own sync address for the entries and shows
+  The baby tracker (Pip, merged in): the third page. Feeds with a left and right timer, bottles, pumping, nappies,
+  sleep, measurements, medicine, notes, a page for each day, trends and a summary for appointments, on the Echo
+  and on every phone (add the site to the home screen). The entries are kept by this site (netlify/functions/sync.js)
+  and shared by every screen. "Bring Pip's data over" (Baby, Settings) copies the old Pip app's entries across
+  without changing the old app.
+
+  Pip (the old tracker): until it is switched off, the Echo asks Pip's own sync address for the entries and shows
   the last feed, next side, nappies and sleep. It can also log to Pip (feeds, bottles, nappies, sleep,
   pump) the same way a phone does, with an outbox that survives a dropped connection. Pip's address
   and passcode are typed into Settings on the Echo (or set once with #pip=ADDRESS&pass=PASSCODE on the
@@ -451,6 +463,165 @@ body.night .dots .dot.on{opacity:.45}
   .cal-t{width:30vmin; font-size:4vmin} .cal-t small{font-size:3.2vmin} .cal-b b{font-size:4.6vmin} .cal-b small{font-size:3.6vmin}
   .frame-note{font-size:4.4vmin}
 }
+/* ---------- Baby: the Pip tracker, merged in as the third page ---------- */
+.baby, .b-sheet{--card:var(--paper); --t-breast:#B07A1E; --t-bottle:#2E72B2; --t-pump:#7A5BB5; --t-nappy:#2D8251; --t-sleep:#4A63A0; --t-other:#A5564C; --good:#2D8251; --warn:#B4621A; --bad:#B5412D}
+.baby{position:absolute; top:0; right:0; bottom:0; left:0; display:flex; flex-direction:column; font-size:clamp(15px,2.35vmin,27px); line-height:1.35}
+body.night .baby, body.night .b-sheet{--card:transparent; --t-breast:var(--amber-dim); --t-bottle:var(--amber-dim); --t-pump:var(--amber-dim); --t-nappy:var(--amber-dim); --t-sleep:var(--amber-dim); --t-other:var(--amber-dim); --good:var(--amber); --warn:var(--amber); --bad:#C8402A}
+.baby button, .b-sheet button{font:inherit; color:inherit; touch-action:manipulation}
+.baby input, .baby textarea, .b-sheet input, .b-sheet textarea{-webkit-user-select:text; user-select:text; font:inherit; font-size:max(16px,1em); color:inherit}
+.b-soft, .b-age, .b-hl, .b-hs, .b-rwhat, .b-note, .b-tt, .b-tb small, .b-count span, .b-stat span, .b-sh span, .b-field label, .b-hint, .b-bar span, .b-cap, .b-val em{color:var(--ink-soft)}
+body.night .b-soft, body.night .b-age, body.night .b-hl, body.night .b-hs, body.night .b-rwhat, body.night .b-note, body.night .b-tt, body.night .b-tb small, body.night .b-count span, body.night .b-stat span,
+body.night .b-sh span, body.night .b-field label, body.night .b-hint, body.night .b-bar span, body.night .b-cap, body.night .b-val em{color:var(--amber-dim)}
+
+.b-head{flex:none; display:flex; align-items:center; flex-wrap:wrap; gap:.5em .9em; padding:.8em 1.4em .5em}
+.b-who{min-width:0; margin-right:auto}
+.b-name{font-size:1.45em; font-weight:600; line-height:1.15}
+.b-age{font-size:.85em}
+.b-tabs{display:flex; gap:.4em}
+.b-tab{padding:.45em 1em; min-height:2.5em; border:.12em solid var(--line); border-radius:999px; background:transparent}
+.b-tab[aria-current="page"]{background:var(--ink); border-color:var(--ink); color:#fff; font-weight:600}
+body.night .b-tab[aria-current="page"]{background:var(--amber); border-color:var(--amber); color:#000}
+.b-pill{display:flex; align-items:center; gap:.5em; padding:.35em .85em; min-height:2.3em; border:.12em solid var(--line); border-radius:999px; background:transparent; font-size:.85em}
+.b-pill i{width:.6em; height:.6em; border-radius:50%; background:var(--good)}
+.b-pill.wait i{background:var(--warn)}
+.b-pill.bad i{background:var(--bad)}
+.b-body{flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; padding:.4em 1.4em 3.6em}
+.b-today{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.95fr); column-gap:2.2em; align-items:start}
+
+.b-hero{text-align:center; padding:.5em 0 .9em}
+.b-hl{font-size:.9em}
+.b-ht{font-size:4.2em; font-weight:500; line-height:1.05; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.b-ht.none{opacity:.3}
+.b-ht small{font-size:.38em; font-weight:400; margin-left:.05em; color:var(--ink-soft)}
+.b-hs{font-size:.9em; min-height:1.4em}
+.b-sides{display:flex; gap:.5em; justify-content:center; margin-top:.7em}
+.b-side{min-width:5.2em; padding:.3em .9em; border:.12em solid var(--line); border-radius:999px; text-align:center; color:var(--ink-soft); font-size:.85em}
+.b-side b{display:block; font-size:1.3em; color:var(--ink)}
+.b-side.next{border-color:var(--ink); color:var(--ink)}
+body.night .b-side b, body.night .b-side.next{color:var(--amber)}
+body.night .b-side.next{border-color:var(--amber)}
+
+.b-run{border:.12em solid var(--line); border-radius:1em; background:var(--card); margin-bottom:.9em; overflow:hidden}
+.b-rtop{display:flex; align-items:center; gap:.8em; padding:.8em 1em}
+.b-rwhat{font-size:.85em}
+.b-rel{font-size:1.9em; font-weight:500; line-height:1.1; font-variant-numeric:tabular-nums}
+.b-rtop .b-btn{margin-left:auto}
+.b-sw{display:flex; border-top:.1em solid var(--line)}
+.b-sw button{flex:1; padding:.8em 0; background:none; border:0; border-right:.1em solid var(--line)}
+.b-sw button:last-child{border-right:0}
+.b-sw button[aria-pressed="true"]{font-weight:700; background:var(--ink); color:#fff}
+body.night .b-sw button[aria-pressed="true"]{background:var(--amber); color:#000}
+.b-sw span{font-variant-numeric:tabular-nums; font-size:.85em; margin-left:.4em; opacity:.8}
+
+.b-btn{padding:.7em 1.2em; min-height:2.9em; border:.14em solid currentColor; border-radius:.8em; background:transparent; font-weight:500}
+.b-btn.p{background:var(--ink); border-color:var(--ink); color:#fff}
+body.night .b-btn.p{background:var(--amber); border-color:var(--amber); color:#000}
+.b-btn.d{color:var(--bad); border-color:var(--bad)}
+.b-btn.g{border-color:var(--line)}
+.b-btn:disabled{opacity:.4}
+.b-acts{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.6em; margin-bottom:1.1em}
+.b-act{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.35em; min-height:4.8em; padding:.6em .3em; border:.12em solid var(--line); border-radius:1em; background:var(--card); font-weight:500}
+.b-act svg{width:1.7em; height:1.7em; color:var(--tc,var(--ink))}
+.b-act[data-t="breast"]{--tc:var(--t-breast)} .b-act[data-t="bottle"]{--tc:var(--t-bottle)} .b-act[data-t="pump"]{--tc:var(--t-pump)}
+.b-act[data-t="nappy"]{--tc:var(--t-nappy)} .b-act[data-t="sleep"]{--tc:var(--t-sleep)} .b-act[data-t="more"]{--tc:var(--t-other)}
+.b-act.on{border-color:currentColor; box-shadow:inset 0 0 0 .1em currentColor}
+.b-act:active, .b-btn:active, .b-chip:active{transform:scale(.97)}
+
+.b-sh{display:flex; align-items:baseline; gap:.6em; margin:1.1em 0 .5em}
+.b-sh:first-child{margin-top:.2em}
+.b-sh h2{font-size:1.05em; font-weight:600}
+.b-sh span{margin-left:auto; font-size:.85em; text-align:right}
+.b-counts{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border:.12em solid var(--line); border-radius:1em; overflow:hidden; background:var(--card)}
+.b-count{padding:.7em .3em; text-align:center; border-right:.1em solid var(--line)}
+.b-count:last-child{border-right:0}
+.b-count b{display:block; font-size:1.7em; font-weight:500; line-height:1.15; font-variant-numeric:tabular-nums}
+.b-count span{font-size:.78em}
+.b-count.met b{color:var(--good)}
+.b-count.low b{color:var(--warn)}
+.b-note{font-size:.78em; margin:.6em 0 0; line-height:1.5}
+
+.b-list{list-style:none}
+.b-ti{display:flex; gap:.8em; width:100%; text-align:left; padding:.7em 0 .7em .8em; border:0; border-bottom:.1em solid var(--line); background:none; position:relative}
+.b-ti::before{content:""; position:absolute; left:0; top:.7em; bottom:.7em; width:.22em; border-radius:.1em; background:var(--rc,var(--ink-soft))}
+.b-ti[data-t="breast"]{--rc:var(--t-breast)} .b-ti[data-t="bottle"]{--rc:var(--t-bottle)} .b-ti[data-t="pump"]{--rc:var(--t-pump)}
+.b-ti[data-t="nappy"]{--rc:var(--t-nappy)} .b-ti[data-t="sleep"]{--rc:var(--t-sleep)}
+.b-tt{flex:none; width:4.8em; font-variant-numeric:tabular-nums}
+.b-tb{flex:1; min-width:0}
+.b-tb b{font-weight:500}
+.b-tb small{display:block; font-size:.85em; word-break:break-word}
+.b-live{font-size:.78em; font-weight:700; color:var(--t-breast); margin-left:.4em}
+.b-none{border:.1em dashed var(--line); border-radius:1em; padding:1.4em; text-align:center; color:var(--ink-soft)}
+body.night .b-none{color:var(--amber-dim)}
+
+.b-dn{display:flex; align-items:center; gap:.7em; margin-bottom:.8em}
+.b-dn > div{margin-right:auto}
+.b-dl{font-size:1.15em; font-weight:600}
+.b-sq{flex:none; width:2.9em; height:2.9em; border:.12em solid var(--line); border-radius:.8em; background:transparent; font-size:1.1em}
+.b-sq:disabled{opacity:.35}
+.b-wide{max-width:46em; margin:0 auto}
+.b-stats{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.6em; margin-bottom:1em}
+.b-stat{border:.12em solid var(--line); border-radius:1em; padding:.8em 1em; background:var(--card)}
+.b-stat b{display:block; font-size:1.6em; font-weight:500; line-height:1.2}
+.b-stat span{font-size:.85em}
+.b-charts{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.8em; margin-bottom:1em}
+.b-chart{border:.12em solid var(--line); border-radius:1em; padding:.9em 1em; background:var(--card)}
+.b-chart h2{font-size:1em; font-weight:600; margin-bottom:.6em}
+.b-bars{display:flex; align-items:flex-end; gap:.4em; height:7em}
+.b-bar{flex:1; min-width:0; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center}
+.b-bar i{display:block; width:72%; min-height:.15em; background:var(--bc); border-radius:.2em .2em 0 0}
+.b-bar span{font-size:.72em; margin-top:.3em}
+.b-bar em{font-style:normal; font-size:.72em; margin-bottom:.15em}
+.b-bar.zero i{opacity:.25}
+.b-line{position:relative; height:7em; margin-top:.4em}
+.b-line svg{position:absolute; top:0; left:0; width:100%; height:100%; overflow:visible}
+.b-line b{position:absolute; width:.7em; height:.7em; margin:-.35em 0 0 -.35em; border-radius:50%; background:var(--t-nappy)}
+.b-cap{font-size:.78em; margin-top:.6em}
+
+.b-set{max-width:46em; margin:0 auto}
+.b-set h2{font-size:1.05em; font-weight:600; margin:1.3em 0 .5em}
+.b-set h2:first-child{margin-top:.2em}
+.b-field{margin-bottom:.9em}
+.b-field label{display:block; font-size:.85em; margin-bottom:.3em}
+.b-in{width:100%; padding:.55em .8em; min-height:2.8em; border:.12em solid var(--line); border-radius:.7em; background:transparent; margin:0}
+textarea.b-in{min-height:5.5em; line-height:1.45; resize:vertical}
+.b-r2{display:grid; grid-template-columns:1fr 1fr; gap:.8em}
+.b-hint{font-size:.82em; line-height:1.5; margin:.3em 0 .8em}
+.b-stack{display:flex; flex-wrap:wrap; gap:.6em; margin-bottom:.8em}
+.b-chips{display:flex; flex-wrap:wrap; gap:.5em; margin-bottom:.9em}
+.b-chip{padding:.5em 1.1em; min-height:2.6em; border:.12em solid var(--line); border-radius:999px; background:transparent}
+.b-chip[aria-pressed="true"]{border-color:currentColor; font-weight:700; box-shadow:inset 0 0 0 .1em currentColor}
+.b-ask{border:.12em solid var(--line); border-radius:1em; padding:.9em 1em; margin:.2em 0 1em; background:var(--card)}
+.b-ask p{margin-bottom:.5em}
+.b-ask .b-in{width:auto; min-width:10em; margin-right:.5em}
+.b-msg{font-size:.88em; margin:.2em 0 .8em; line-height:1.5}
+
+.b-scrim{position:fixed; top:0; right:0; bottom:0; left:0; z-index:24; background:rgba(0,0,0,.5); display:none}
+.b-scrim.open{display:block}
+.b-sheet{position:fixed; left:0; right:0; bottom:var(--kb,0px); z-index:25; max-width:34em; margin:0 auto; background:var(--paper); color:var(--ink); border-radius:1.2em 1.2em 0 0;
+  padding:.6em 1.3em 1.4em; max-height:calc(94vh - var(--kb,0px)); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+  transform:translateY(105%); visibility:hidden; transition:transform .2s ease, visibility 0s .2s; font-size:clamp(15px,2.35vmin,27px); line-height:1.35; -webkit-user-select:none; user-select:none}
+.b-sheet.open{transform:none; visibility:visible; transition:transform .2s ease}
+body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(--line); border-bottom:0}
+.b-grab{width:2.6em; height:.28em; border-radius:.2em; background:var(--line); margin:0 auto .9em}
+.b-sheet h3{font-size:1.25em; font-weight:600; margin-bottom:.8em}
+.b-step{display:flex; align-items:center; gap:.8em; margin:.2em 0 .8em}
+.b-step .b-sq{width:3.2em; height:3.2em; border:.14em solid currentColor; font-size:1.2em}
+.b-val{flex:1; text-align:center; font-size:2.2em; font-weight:500; font-variant-numeric:tabular-nums}
+.b-val em{font-size:.45em; font-style:normal; margin-left:.2em}
+.b-sheet .b-row{display:flex; gap:.6em; margin-top:.4em}
+.b-sheet .b-row .b-btn{flex:1}
+
+@media (max-aspect-ratio: 1/1){
+  .baby, .b-sheet{font-size:clamp(15px,4.1vmin,22px)}
+  .b-head{padding:.7em 1em .3em}
+  .b-tabs{order:3; flex:1 0 100%}
+  .b-tab{flex:1; padding:.45em 0}
+  .b-body{padding:.4em 1em 4.8em}
+  .b-today{display:block}
+  .b-ht{font-size:3.6em}
+  .b-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .b-charts{grid-template-columns:minmax(0,1fr)}
+}
 @media (prefers-reduced-motion: reduce){
   body, .bag-body, .controls, .light-controls{transition:none}
 }
@@ -534,8 +705,26 @@ body.night .dots .dot.on{opacity:.45}
   <p class="tip" id="tip"></p>
 </main>
 </section>
+<section class="page" id="pageBaby" aria-label="Baby">
+  <div class="baby" id="baby">
+    <header class="b-head">
+      <div class="b-who"><p class="b-name" id="bName">Pip</p><p class="b-age" id="bAge"></p></div>
+      <nav class="b-tabs" aria-label="Baby tracker">
+        <button class="b-tab" data-b="tab" data-v="today" aria-current="page">Today</button>
+        <button class="b-tab" data-b="tab" data-v="days">Days</button>
+        <button class="b-tab" data-b="tab" data-v="trends">Trends</button>
+        <button class="b-tab" data-b="tab" data-v="settings">Settings</button>
+      </nav>
+      <button class="b-pill" id="bPill" data-b="pill" aria-label="Sync now"><i></i><span id="bPillT">Connecting</span></button>
+      <button class="b-btn g" data-b="menu">Menu</button>
+    </header>
+    <div class="b-body" id="bBody"></div>
+  </div>
+</section>
 </div>
 <div class="dots" id="dots"></div>
+<div class="b-scrim" id="bScrim"></div>
+<div class="b-sheet" id="bSheet" role="dialog" aria-modal="true" aria-label="Baby"><div class="b-grab"></div><div id="bSheetBody"></div></div>
 
 <nav class="controls" id="controls" aria-label="Controls">
   <button class="btn" data-act="log" id="logBtn" hidden>Log</button>
@@ -647,8 +836,8 @@ body.night .dots .dot.on{opacity:.45}
     </div>
 
     <div class="set" id="pipSet">
-      <h3>Pip</h3>
-      <p class="hint">Shows the last feed, next side, nappies and sleep from your Pip app, and lets you log feeds, bottles, nappies and sleep from this screen. Use the same address and passcode as on your phones.</p>
+      <h3>Pip (the old app)</h3>
+      <p class="hint">The baby tracker is now part of this app (the Baby page). This is only for the old Pip app: its address, so its data can be brought over, and its passcode if it has one. Moving over and switching are on the Baby page, under Settings. Until you switch, this screen keeps reading and writing the old Pip.</p>
       <div class="row">
         <input type="text" id="pipHost" placeholder="Pip address" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Pip address">
         <input type="password" id="pipPass" placeholder="Passcode" autocomplete="off" aria-label="Pip passcode">
@@ -725,7 +914,7 @@ body.night .dots .dot.on{opacity:.45}
 (function () {
   'use strict';
 
-  var VERSION = '19 Oct 2026, v7';
+  var VERSION = '20 Oct 2026, v8';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -771,7 +960,7 @@ body.night .dots .dot.on{opacity:.45}
     sound: { type: 'brown', volume: 30, timer: '60' },
     light: { colour: 'amber', level: 45, off: '30' },
     frameIdle: 5,   // minutes of no touching before the photo frame starts by itself (0 for never)
-    pip: { host: '', pass: '', dob: '', auto: false, log: true, by: 'Nursery screen' }
+    pip: { host: '', pass: '', dob: '', auto: false, log: true, by: 'Nursery screen', src: '', baby: '', wet: 6, dirty: 2, guide: true }
   };
   function withDefaults(s) {
     var out = JSON.parse(JSON.stringify(DEFAULTS));
@@ -1174,13 +1363,16 @@ body.night .dots .dot.on{opacity:.45}
     var mode = modeNow(now);
     if (mode !== lastMode) {
       var firstDraw = !lastMode;
+      // Decided before the photo frame closes, because closing it counts as a touch. A frame showing means nobody was using the screen.
+      var left = !firstDraw && (!!(Frame && Frame.on) || Date.now() - frameTouch.at >= 2 * 60000 || Date.now() - lookTapAt < 3000);
       document.body.classList.toggle('night', mode === 'night');
       applyBrightness(mode);
       if (mode === 'night' && Frame && Frame.on) Frame.close();   // the photo frame gives way when the night look starts
       if (mode === 'day') frameTouched();   // the photo frame waits its full time after the day look starts
       lastMode = mode;
       tlKey = '';
-      if (!firstDraw) Pager.go(mode === 'night' ? 1 : 0, true);   // night is the nursery screen, day is Home
+      // night is the nursery screen, day is Home, unless someone is in the middle of using the screen (a phone mid-feed)
+      if (left) Pager.go(mode === 'night' ? 1 : 0, true);
     }
     setText(el.clock, clockText(now));
     setText(el.date, dateText(now) + pipAge());
@@ -1258,7 +1450,7 @@ body.night .dots .dot.on{opacity:.45}
   }
 
   // ---------- controls bar ----------
-  var controlsTimer = null;
+  var controlsTimer = null, lookTapAt = 0;
   function showControls(on) {
     el.controls.classList.toggle('show', on);
     clearTimeout(controlsTimer);
@@ -1285,6 +1477,7 @@ body.night .dots .dot.on{opacity:.45}
     else if (act === 'family') openPanel(el.family);
     else if (act === 'settings') openPanel(el.settings);
     else if (act === 'look') {
+      lookTapAt = Date.now();
       var now = new Date();
       if (modeNow(now) === 'night') override = { mode: 'day', until: new Date(now.getTime() + 2 * 60000) };
       else override = { mode: 'night', until: nextSwitch(now) };
@@ -1593,9 +1786,18 @@ body.night .dots .dot.on{opacity:.45}
   var pip = { origin: pipCache.origin || null, cursor: +pipCache.cursor || 0,
     entries: (pipCache.entries && typeof pipCache.entries === 'object') ? pipCache.entries : {},
     outbox: (pipCache.outbox && typeof pipCache.outbox === 'object') ? pipCache.outbox : {},   // id -> true, waiting for Pip to confirm
-    at: +pipCache.at || 0, status: 'idle', busy: false, again: false, inflight: null, soon: null, seenRun: undefined, fast: false, dirty: false };
+    at: +pipCache.at || 0, status: 'idle', busy: false, again: false, inflight: null, soon: null, seenRun: undefined, fast: false, dirty: false,
+    rev: 1, saved: 0, dirtyStore: false, list: [], listRev: 0 };   // rev counts changes to the entries, so lists are worked out once per change
 
-  function pipOrigin() {
+  // Where the baby's entries live: this site ('here'), or the old Pip app ('old'). Unless it has been chosen,
+  // it follows whether an old Pip address has been typed in, so a screen set up before the move carries on as it was.
+  function pipSrc() {
+    var s = settings.pip.src, old = !!String(settings.pip.host || '').trim();
+    if (s === 'here') return 'here';
+    if (s === 'old') return old ? 'old' : 'here';
+    return old ? 'old' : 'here';
+  }
+  function pipOldOrigin() {
     var raw = String(settings.pip.host || '').trim();
     if (!raw) return null;
     if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
@@ -1604,11 +1806,31 @@ body.night .dots .dot.on{opacity:.45}
       return (u.protocol === 'https:' || u.protocol === 'http:') && u.hostname ? u.origin : null;
     } catch (e) { return null; }
   }
+  function pipOrigin() {
+    if (pipSrc() === 'here') return syncShown() ? location.origin : null;
+    return pipOldOrigin();
+  }
   function pipOn() { return !!pipOrigin(); }
-  function pipStore() { save('nursery.pip', { origin: pip.origin, cursor: pip.cursor, entries: pip.entries, outbox: pip.outbox, at: pip.at }); }
+  // Written when something changed, or at most once a minute otherwise (the time of the last update), so a long
+  // history isn't rewritten on every poll. If the device's storage is full, the oldest synced entries are dropped.
+  function pipStore(force) {
+    if (!force && !pip.dirtyStore && Date.now() - pip.saved < 60000) return;
+    var snap = { origin: pip.origin, cursor: pip.cursor, entries: pip.entries, outbox: pip.outbox, at: pip.at };
+    try { localStorage.setItem('nursery.pip', JSON.stringify(snap)); pip.saved = Date.now(); pip.dirtyStore = false; return; } catch (e) { /* full, or storage unavailable */ }
+    var cutoff = Date.now() - 120 * DAY, keep = {};
+    Object.keys(pip.entries).forEach(function (id) {
+      var x = pip.entries[id];
+      if (x && (pip.outbox[id] || x.running || (x.end || x.start || 0) >= cutoff)) keep[id] = x;
+    });
+    pip.entries = keep; pip.rev++; snap.entries = keep;
+    try { localStorage.setItem('nursery.pip', JSON.stringify(snap)); pip.saved = Date.now(); pip.dirtyStore = false; } catch (e2) { /* storage unavailable */ }
+  }
+  // A different place to keep the entries. Anything not yet sent stays and goes to the new place.
   function pipReset(origin) {
-    pip.origin = origin; pip.cursor = 0; pip.entries = {}; pip.outbox = {}; pip.at = 0; pip.status = 'idle'; pip.seenRun = undefined;
-    pipStore();
+    var keep = {}, box = {};
+    Object.keys(pip.outbox).forEach(function (id) { if (pip.entries[id]) { keep[id] = pip.entries[id]; box[id] = true; } });
+    pip.origin = origin; pip.cursor = 0; pip.entries = keep; pip.outbox = box; pip.at = 0; pip.status = 'idle'; pip.seenRun = undefined; pip.rev++;
+    pipStore(true);
   }
 
   // One round trip to Pip. With nothing to send it only reads (GET). With entries waiting in the
@@ -1632,13 +1854,15 @@ body.night .dots .dot.on{opacity:.45}
 
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
-    // With no passcode no custom header is sent, which keeps the request "simple" and skips the browser's pre-check.
-    var hdrs = {};
-    if (settings.pip.pass) hdrs['x-pip-pass'] = settings.pip.pass;
+    // This site: the nursery passcode only if the site is locked. The old Pip: with no passcode no custom header is
+    // sent, which keeps the request "simple" and skips the browser's pre-check.
+    var hdrs = {}, here = pipSrc() === 'here', custom = here ? !!sync.pass : !!settings.pip.pass;
+    if (here) { if (sync.pass) hdrs['x-nursery-pass'] = sync.pass; }
+    else if (settings.pip.pass) hdrs['x-pip-pass'] = settings.pip.pass;
     var opts = { cache: 'no-store', headers: hdrs, signal: ctrl ? ctrl.signal : undefined };
     if (out.length) {
       opts.method = 'POST';
-      hdrs['content-type'] = settings.pip.pass ? 'application/json' : 'text/plain;charset=UTF-8';   // Pip reads the body as JSON either way
+      hdrs['content-type'] = here || custom ? 'application/json' : 'text/plain;charset=UTF-8';   // the server reads the body as JSON either way
       opts.body = JSON.stringify({ since: pip.cursor, entries: out });
     }
     pip.inflight = fetch(origin + '/api/sync' + (out.length ? '' : '?since=' + pip.cursor), opts).then(function (r) {
@@ -1654,28 +1878,24 @@ body.night .dots .dot.on{opacity:.45}
       if ((d.seq || 0) < pip.cursor) {   // Pip's data was reset: keep only what is still waiting to be sent
         var keep = {};
         Object.keys(pip.outbox).forEach(function (id) { if (pip.entries[id]) keep[id] = pip.entries[id]; });
-        pip.cursor = 0; pip.entries = keep; pip.status = 'idle';
+        pip.cursor = 0; pip.entries = keep; pip.status = 'idle'; pip.rev++; pip.dirtyStore = true;
         return;
       }
       // Only clear what Pip confirmed holding, and only if it is still the version we sent.
       (d.ack || []).forEach(function (id) {
         var mine = pip.entries[id];
-        if (mine && sent[id] !== undefined && mine.updated === sent[id]) delete pip.outbox[id];
+        if (mine && sent[id] !== undefined && mine.updated === sent[id]) { delete pip.outbox[id]; pip.dirtyStore = true; }
       });
       d.entries.forEach(function (e) {
         if (!e || typeof e.id !== 'string' || pip.outbox[e.id]) return;   // ours is newer while it waits
         var mine = pip.entries[e.id];
-        if (!mine || (e.updated || 0) >= (mine.updated || 0)) pip.entries[e.id] = e;
+        if (!mine || (e.updated || 0) >= (mine.updated || 0)) { pip.entries[e.id] = e; pip.rev++; pip.dirtyStore = true; }
       });
+      if ((d.seq || 0) !== pip.cursor) pip.dirtyStore = true;
       pip.cursor = d.seq || pip.cursor;
       pip.at = Date.now();
       pip.status = 'ok';
-      var cutoff = Date.now() - 4 * DAY;
-      Object.keys(pip.entries).forEach(function (id) {
-        var e = pip.entries[id];
-        if (!e || (!pip.outbox[id] && !e.running && (e.end || e.start || 0) < cutoff)) delete pip.entries[id];
-      });
-      pipStore();
+      pipStore();   // every entry is kept, because the Baby page shows the whole history
       var run = pipStats(Date.now()).runFeed;
       if (pip.seenRun !== undefined && run && run.id !== pip.seenRun && settings.pip.auto &&
           modeNow(new Date()) === 'night' && !Feed.on && !Light.on && !openOverlay && !Log.on) Feed.open();
@@ -1697,11 +1917,19 @@ body.night .dots .dot.on{opacity:.45}
     return pip.inflight;
   }
 
+  // Every entry that has not been deleted, newest first. Worked out once per change, not once per look.
+  function pipList() {
+    if (pip.listRev === pip.rev) return pip.list;
+    var out = [], k, e;
+    for (k in pip.entries) { e = pip.entries[k]; if (e && !e.deleted && +e.start) out.push(e); }
+    out.sort(function (a, b) { return b.start - a.start; });
+    pip.list = out; pip.listRev = pip.rev;
+    return out;
+  }
+
   // The same rules Pip uses on its own home screen.
   function pipStats(ms) {
-    var list = [], k, e;
-    for (k in pip.entries) { e = pip.entries[k]; if (e && !e.deleted && +e.start) list.push(e); }
-    list.sort(function (a, b) { return b.start - a.start; });
+    var list = pipList();
     var s = { feed: null, runFeed: null, runSleep: null, lastSleep: null, next: null, c: { feeds: 0, wet: 0, dirty: 0, sleepMs: 0 } };
     var from = ms - DAY;
     list.forEach(function (e) {
@@ -1738,10 +1966,11 @@ body.night .dots .dot.on{opacity:.45}
   // Everything the band and the night feed screen show, worked out once.
   function pipView(now) {
     var ms = now.getTime(), st = pip.status;
-    if (st === 'pass') return { msg: 'Passcode doesn’t match', sub: 'Check it in Settings' };
-    if (st === 'address') return { msg: 'Can’t find Pip there', sub: 'Check the address in Settings' };
+    var here = pipSrc() === 'here';
+    if (st === 'pass') return here ? { msg: 'This site needs its passcode', sub: 'Enter it in Settings, Shared settings' } : { msg: 'Passcode doesn’t match', sub: 'Check it in Settings' };
+    if (st === 'address') return here ? { msg: 'The tracker isn’t on this site yet', sub: 'Redeploy it from GitHub' } : { msg: 'Can’t find Pip there', sub: 'Check the address in Settings' };
     if (st === 'blocked') return { msg: 'Pip won’t let this screen in', sub: 'Open Settings, Pip for details' };
-    if (!pip.at) return st === 'idle' ? { msg: 'Connecting to Pip', sub: '' } : { msg: 'Can’t reach Pip', sub: 'Check the Echo is on Wi-Fi' };
+    if (!pip.at) return st === 'idle' ? { msg: here ? 'Connecting' : 'Connecting to Pip', sub: '' } : { msg: here ? 'Can’t reach the server' : 'Can’t reach Pip', sub: 'Check the Echo is on Wi-Fi' };
     var s = pipStats(ms), stale = ms - pip.at > 5 * MIN, tail = stale ? ', out of date' : '', wait = 0;
     Object.keys(pip.outbox).forEach(function (id) { var o = pip.entries[id]; if (o && ms - (o.updated || ms) > 20000) wait++; });
     if (wait) tail += ', ' + wait + ' waiting to send';
@@ -1827,22 +2056,16 @@ body.night .dots .dot.on{opacity:.45}
     return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
   }
   function pipLive(type) {
-    var best = null;
-    Object.keys(pip.entries).forEach(function (id) {
-      var e = pip.entries[id];
-      if (e && !e.deleted && e.running && e.type === type && (!best || e.start > best.start)) best = e;
-    });
-    return best;
+    var l = pipList(), i;
+    for (i = 0; i < l.length; i++) if (l[i].running && l[i].type === type) return l[i];
+    return null;
   }
   function pipLast(type) {
-    var best = null;
-    Object.keys(pip.entries).forEach(function (id) {
-      var e = pip.entries[id];
-      if (e && !e.deleted && e.type === type && (!best || e.start > best.start)) best = e;
-    });
-    return best;
+    var l = pipList(), i;
+    for (i = 0; i < l.length; i++) if (l[i].type === type) return l[i];
+    return null;
   }
-  function refresh() { render(); if (Feed.on) Feed.paint(); if (Log.on) Log.paint(); }
+  function refresh() { render(); if (Feed.on) Feed.paint(); if (Log.on) Log.paint(); Baby.paint(); }
   function pipSoon() { clearTimeout(pip.soon); pip.soon = setTimeout(pipLoad, 400); }
 
   // Save one entry locally and queue it to send.
@@ -1851,6 +2074,7 @@ body.night .dots .dot.on{opacity:.45}
     e.by = e.by || logBy();
     pip.entries[e.id] = e;
     pip.outbox[e.id] = true;
+    pip.rev++; pip.dirtyStore = true;
     pipStore();
     refresh();
     pipSoon();
@@ -1912,7 +2136,7 @@ body.night .dots .dot.on{opacity:.45}
   }
 
   function nextSideNow() { return pipStats(Date.now()).next || 'left'; }
-  function startBreast(side) {
+  function startBreast(side, quiet) {
     if (!logReady()) return;
     fresh(function () {
       if (pipLive('breast')) { toast('A feed is already running', false); refresh(); return; }
@@ -1922,6 +2146,7 @@ body.night .dots .dot.on{opacity:.45}
         return 'Feeding, ' + side + ' side';
       });
       pip.seenRun = made.id;
+      if (quiet) return;
       if (!Feed.on && modeNow(new Date()) === 'night') { Log.close(); Feed.open(); }
       else if (Feed.on) Log.close();
     });
@@ -2037,11 +2262,11 @@ body.night .dots .dot.on{opacity:.45}
 
   function logStatus() {
     var n = Object.keys(pip.outbox).length;
-    if (pip.status === 'pass') return 'Passcode doesn’t match, nothing is being sent';
-    if (pip.status === 'address') return 'Can’t find Pip, nothing is being sent';
+    if (pip.status === 'pass') return pipSrc() === 'here' ? 'Needs the site’s passcode, nothing is being sent' : 'Passcode doesn’t match, nothing is being sent';
+    if (pip.status === 'address') return pipSrc() === 'here' ? 'The tracker isn’t on this site yet, nothing is being sent' : 'Can’t find Pip, nothing is being sent';
     if (n) return pip.busy ? 'Sending…' : n + ' waiting to send' + (pip.status === 'offline' ? ', no connection' : '');
     if (!pip.at) return 'Connecting to Pip…';
-    return pip.status === 'offline' ? 'No connection, showing the last update' : 'Saved to Pip';
+    return pip.status === 'offline' ? 'No connection, showing the last update' : (pipSrc() === 'here' ? 'Saved' : 'Saved to Pip');
   }
 
   var OFFS = [[0, 'Now'], [5, '5 min ago'], [10, '10 min ago'], [20, '20 min ago'], [30, '30 min ago'], [60, '1 hour ago']];
@@ -2104,9 +2329,7 @@ body.night .dots .dot.on{opacity:.45}
         '<button class="lg-tile' + (sleep ? ' on' : '') + '" data-lg="sleep"' + dis + '>' + (sleep ? 'End sleep' : 'Sleep') + '<small>' + (sleep ? '<span id="lg-sl"></span>' : 'Start') + '</small></button>' +
         '<button class="lg-tile' + (pump ? ' on' : '') + '" data-lg="pump"' + dis + '>' + (pump ? 'Stop pump' : 'Pump') + '<small>' + (pump ? '<span id="lg-pm"></span>' : 'Start') + '</small></button>' +
         '</div></div><div class="lg-recent"><h3>Recent</h3>';
-      var list = [];
-      Object.keys(pip.entries).forEach(function (id) { var e = pip.entries[id]; if (e && !e.deleted && +e.start) list.push(e); });
-      list.sort(function (a, b) { return b.start - a.start; });
+      var list = pipList();
       list.slice(0, 6).forEach(function (e) {
         var d = describe(e), sure = Log.confirm === e.id;
         h += '<div class="lg-item"><span><b>' + esc(d.t) + '</b>' + (d.d ? ' · ' + esc(d.d) : '') + '<small>' + clockText(new Date(e.start)) + (e.by ? ' · ' + esc(e.by) : '') + '</small></span>' +
@@ -2275,9 +2498,9 @@ body.night .dots .dot.on{opacity:.45}
   function syncPipStatus() {
     var t;
     if (!pipOn()) t = 'Not connected.';
-    else if (pip.status === 'ok') t = 'Connected. Last updated ' + clockText(new Date(pip.at)) + '.';
-    else if (pip.status === 'pass') t = 'The passcode doesn’t match the one in Pip.';
-    else if (pip.status === 'address') t = 'No Pip found at that address.';
+    else if (pip.status === 'ok') t = (pipSrc() === 'here' ? 'This app keeps the baby’s entries. ' : 'Connected to the old Pip. ') + 'Last updated ' + clockText(new Date(pip.at)) + '.';
+    else if (pip.status === 'pass') t = pipSrc() === 'here' ? 'This site is locked and needs its passcode (Shared settings, above).' : 'The passcode doesn’t match the one in Pip.';
+    else if (pip.status === 'address') t = pipSrc() === 'here' ? 'This site doesn’t have the tracker function yet. Redeploy it from GitHub.' : 'No Pip found at that address.';
     else if (pip.status === 'offline') t = 'Can’t reach Pip. Check the Echo is on Wi-Fi and the address is spelled right.';
     else if (pip.status === 'blocked') t = 'Pip is there, but the browser blocked this page from reading its answer. Pip’s site probably needs redeploying from GitHub so it accepts other sites.';
     else if (pip.status === 'error') t = 'That address answered' + (pip.code ? ' (error ' + pip.code + ')' : '') + ', but it doesn’t look like Pip. Check the address.';
@@ -2316,7 +2539,7 @@ body.night .dots .dot.on{opacity:.45}
   // night light and the "Logged as" name stay on each device. Each setting carries the time the server
   // last saw it change, so two devices changing different settings never overwrite each other. While the
   // site is open the Pip passcode is not stored on the server (a locked site shares it too).
-  var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'frameIdle', 'pip.host', 'pip.pass', 'pip.dob'];
+  var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'frameIdle', 'pip.host', 'pip.pass', 'pip.dob', 'pip.src', 'pip.baby', 'pip.wet', 'pip.dirty', 'pip.guide'];
   var HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
   var BAG_KEYS = ['0.2', '1.0', '2.5', '3.5'];
   function okStr(v, n) { return typeof v === 'string' && v.length <= n; }
@@ -2335,7 +2558,12 @@ body.night .dots .dot.on{opacity:.45}
     },
     'pip.host': function (v) { return okStr(v, 200); },
     'pip.pass': function (v) { return okStr(v, 200); },
-    'pip.dob': function (v) { return v === '' || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)); }
+    'pip.dob': function (v) { return v === '' || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)); },
+    'pip.src': function (v) { return v === 'old' || v === 'here'; },
+    'pip.baby': function (v) { return okStr(v, 40); },
+    'pip.wet': function (v) { return typeof v === 'number' && v % 1 === 0 && v >= 0 && v <= 20; },
+    'pip.dirty': function (v) { return typeof v === 'number' && v % 1 === 0 && v >= 0 && v <= 20; },
+    'pip.guide': function (v) { return typeof v === 'boolean'; }
   };
   function skGet(k) { return k.indexOf('pip.') === 0 ? settings.pip[k.slice(4)] : settings[k]; }
   function skSet(k, v) { if (k.indexOf('pip.') === 0) settings.pip[k.slice(4)] = v; else settings[k] = v; }
@@ -2438,6 +2666,7 @@ body.night .dots .dot.on{opacity:.45}
       syncApply(d.keys);
       sync.first = false; sync.last = Date.now(); sync.status = 'ok';
       syncStore();
+      if (pipSrc() === 'here' && pip.status === 'pass') { pip.status = 'idle'; setTimeout(pipLoad, 0); }
     }).catch(function () {
       clearTimeout(timer);
       sync.status = 'offline';
@@ -2661,7 +2890,8 @@ body.night .dots .dot.on{opacity:.45}
   // True while something else has the screen, so the frame must not come on by itself.
   function frameBlocked() {
     return Frame.on || lastMode !== 'day' || document.visibilityState === 'hidden' || !!openOverlay ||
-      Sound.playing || Light.on || Feed.on || Log.on || el.controls.classList.contains('show');
+      Sound.playing || Light.on || Feed.on || Log.on || el.controls.classList.contains('show') ||
+      Baby.sheet || Pager.at === 2 || window.innerHeight > window.innerWidth;   // not over the tracker, and not on a phone held upright
   }
   // The shuffled slideshow itself. The photo frame and the Home page each run one.
   // root holds two .slide elements (each a blurred .bg and an img) that fade into each other.
@@ -2805,7 +3035,7 @@ body.night .dots .dot.on{opacity:.45}
   // The night look always starts on the nursery screen, and the day look comes back to Home when nobody has
   // touched the screen for a couple of minutes.
   var HOME_RETURN = 2 * 60000;
-  var PAGES = [{ id: 'pageHome', name: 'Home', hash: 'home' }, { id: 'pageNursery', name: 'Nursery', hash: 'nursery' }];
+  var PAGES = [{ id: 'pageHome', name: 'Home', hash: 'home' }, { id: 'pageNursery', name: 'Nursery', hash: 'nursery' }, { id: 'pageBaby', name: 'Baby', hash: 'baby' }];
   var Home = { calKey: '', wxKey: '' };
 
   var Pager = {
@@ -2828,7 +3058,9 @@ body.night .dots .dot.on{opacity:.45}
       var d = el.dots.children;
       for (var k = 0; k < d.length; k++) { d[k].classList.toggle('on', k === Pager.at); d[k].setAttribute('aria-current', k === Pager.at ? 'page' : 'false'); }
       if (Pager.at === 0) { homeRender(new Date()); homeCalCheck(); }
+      if (Pager.at === 2) Baby.paint(true);
       tileCheck();
+      try { history.replaceState(null, '', location.pathname + location.search + '#' + PAGES[Pager.at].hash); } catch (e) { /* not allowed here */ }   // so a home-screen shortcut made now opens this page
     }
   };
   PAGES.forEach(function (p, i) {
@@ -2863,7 +3095,8 @@ body.night .dots .dot.on{opacity:.45}
   window.addEventListener('hashchange', function () { var i = pageIn(location.hash); if (i >= 0) Pager.go(i); });
   // Back to Home once the screen has been left alone.
   function pagerIdle() {
-    if (Pager.at === 0 || lastMode !== 'day' || openOverlay || Frame.on || el.controls.classList.contains('show')) return;
+    if (Pager.at === 0 || lastMode !== 'day' || openOverlay || Frame.on || Baby.sheet || el.controls.classList.contains('show')) return;
+    if (window.innerHeight > window.innerWidth) return;   // a phone held upright is being used, not left on a shelf
     if (Date.now() - frameTouch.at >= HOME_RETURN) Pager.go(0);
   }
 
@@ -3019,6 +3252,786 @@ body.night .dots .dot.on{opacity:.45}
   });
   setInterval(pagerIdle, 5000);
   setInterval(homeCalCheck, 30000);
+  // ---------- Baby: Pip's whole tracker, as the third page ----------
+  // Everything the Pip app did lives here: the breast timer with left and right, bottles, pumping, nappies,
+  // sleep, measurements, medicine, notes, a page for each day, trends and a summary to read out at
+  // appointments, and exports. It uses the same entries as the Echo's Log screen and night feed screen (the
+  // pip.entries above), so there is one list of what has been logged and one way it is sent to the server.
+  // The entries are kept by this site (netlify/functions/sync.js). "Bring Pip's data over" copies the old
+  // Pip app's entries across without touching the old app.
+  var BNAMES = { breast: 'Breast feed', bottle: 'Bottle', pump: 'Pump', nappy: 'Nappy', sleep: 'Sleep', growth: 'Measurement', med: 'Medicine', note: 'Note' };
+  var BICON = {
+    breast: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    bottle: '<path d="M10 2h4v3l1.5 2A3 3 0 0 1 16 9v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V9a3 3 0 0 1 .5-2L10 5z"/><path d="M8 13h8"/>',
+    pump: '<path d="M7 3h10l-1 5H8z"/><path d="M8 8v5a4 4 0 0 0 4 4 4 4 0 0 0 4-4V8"/><path d="M12 17v4"/>',
+    nappy: '<path d="M3 6h18l-2 6a7 7 0 0 1-14 0z"/><path d="M3 6c3 1 6 1.5 9 1.5S18 7 21 6"/>',
+    sleep: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
+    more: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>'
+  };
+  var Baby = { tab: 'today', day: Date.now(), html: '', hero: '', stale: true, sheet: false, bt: null, confirm: '', confirmTimer: null, minute: 0, press: false, late: false, pressTimer: 0, imp: { busy: false, msg: '' } };
+  var bEl = { body: $('bBody'), name: $('bName'), age: $('bAge'), pill: $('bPill'), pillT: $('bPillT'), scrim: $('bScrim'), sheet: $('bSheet'), sheetBody: $('bSheetBody') };
+
+  function bEsc(s) { return esc(s === null || s === undefined ? '' : s); }
+  function bIcon(k) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + BICON[k] + '</svg>'; }
+  function bPad(n) { return (n < 10 ? '0' : '') + n; }
+  function bAt(ms) { return clockText(new Date(ms)); }
+  function bDay0(ms) { return startOfDay(new Date(ms)).getTime(); }
+  function bDayName(ms) {
+    var t = bDay0(Date.now()), d = bDay0(ms), x = new Date(ms);
+    if (d === t) return 'Today';
+    if (d === addDays(t, -1)) return 'Yesterday';
+    return DAYS[x.getDay()] + ' ' + x.getDate() + ' ' + MONTHS[x.getMonth()];
+  }
+  function bInput(ms) { var d = new Date(ms); return d.getFullYear() + '-' + bPad(d.getMonth() + 1) + '-' + bPad(d.getDate()) + 'T' + bPad(d.getHours()) + ':' + bPad(d.getMinutes()); }
+  function bEnd(e) { return e.end || (e.running ? Date.now() : e.start); }
+  function bTypeIs(t) { return function (e) { return e.type === t; }; }
+
+  // ---- numbers
+  function bCounts(list) {
+    var c = { feeds: 0, wet: 0, dirty: 0, sleepMs: 0, bottleMl: 0, pumpMl: 0, breastMs: 0 };
+    list.forEach(function (e) {
+      if (e.type === 'breast' || e.type === 'bottle') c.feeds++;
+      if (e.type === 'breast') c.breastMs += (e.leftMs || 0) + (e.rightMs || 0);
+      if (e.type === 'bottle') c.bottleMl += e.ml || 0;
+      if (e.type === 'pump') c.pumpMl += (e.leftMl || 0) + (e.rightMl || 0);
+      if (e.type === 'nappy') { if (e.wet) c.wet++; if (e.dirty) c.dirty++; }
+      if (e.type === 'sleep' && e.end) c.sleepMs += e.end - e.start;
+    });
+    return c;
+  }
+  function bWindow24() { var from = Date.now() - DAY; return pipList().filter(function (e) { return bEnd(e) >= from; }); }
+  function bOn(ms) { var from = bDay0(ms), to = addDays(from, 1); return pipList().filter(function (e) { return e.start >= from && e.start < to; }); }
+  function bAgeDays() {
+    if (!settings.pip.dob) return null;
+    var born = new Date(settings.pip.dob + 'T00:00:00'), d = Math.round((startOfDay(new Date()).getTime() - born.getTime()) / DAY);
+    return isNaN(d) ? null : d;
+  }
+  // In the first week the usual guide is about one wet nappy per day of age, so the target ramps up to day six.
+  function bWetTarget() { var d = bAgeDays(); return d !== null && d >= 0 && d < 6 ? Math.max(1, d || 1) : settings.pip.wet; }
+  function bLastDays(n) {
+    var out = [], i, t = bDay0(Date.now());
+    for (i = n - 1; i >= 0; i--) { var ts = addDays(t, -i); out.push({ ts: ts, list: bOn(ts + 12 * HOUR) }); }
+    return out;
+  }
+  function bAvgGap() {
+    var feeds = pipList().filter(function (e) { return (e.type === 'breast' || e.type === 'bottle') && e.start > Date.now() - 2 * DAY; }).sort(function (a, b) { return a.start - b.start; });
+    if (feeds.length < 2) return null;
+    var total = 0, i;
+    for (i = 1; i < feeds.length; i++) total += feeds[i].start - bEnd(feeds[i - 1]);
+    return total / (feeds.length - 1);
+  }
+  function bLongestSleep() {
+    var s = pipList().filter(function (e) { return e.type === 'sleep' && e.end && e.start > Date.now() - 7 * DAY; });
+    return s.length ? s.reduce(function (m, e) { return Math.max(m, e.end - e.start); }, 0) : null;
+  }
+  function bWeights() { return pipList().filter(function (e) { return e.type === 'growth' && e.weightG; }).sort(function (a, b) { return a.start - b.start; }); }
+
+  // ---- what an entry says about itself
+  function bDesc(e) {
+    var bits, tot;
+    switch (e.type) {
+      case 'breast':
+        if (e.running) return { t: 'Breast feed', d: 'feeding now' };
+        bits = [pdur((e.leftMs || 0) + (e.rightMs || 0))];
+        if (e.leftMs) bits.push('L ' + pdur(e.leftMs));
+        if (e.rightMs) bits.push('R ' + pdur(e.rightMs));
+        return { t: 'Breast feed', d: bits.join(' · ') };
+      case 'bottle': return { t: 'Bottle', d: (e.ml || 0) + ' mL · ' + (e.kind === 'formula' ? 'formula' : 'expressed') };
+      case 'pump':
+        if (e.running) return { t: 'Pump', d: 'pumping now' };
+        tot = (e.leftMl || 0) + (e.rightMl || 0);
+        return { t: 'Pump', d: [tot ? tot + ' mL' : '', e.end ? pdur(e.end - e.start) : ''].filter(Boolean).join(' · ') || '–' };
+      case 'nappy':
+        bits = [];
+        if (e.wet) bits.push('wet');
+        if (e.dirty) bits.push('dirty');
+        return { t: 'Nappy', d: bits.join(' + ') + (e.colour ? ' · ' + e.colour : '') };
+      case 'sleep': return { t: 'Sleep', d: e.running ? 'asleep now' : (e.end ? pdur(e.end - e.start) : 'still going') };
+      case 'growth':
+        bits = [];
+        if (e.weightG) bits.push((e.weightG / 1000).toFixed(3) + ' kg');
+        if (e.lengthCm) bits.push(e.lengthCm + ' cm');
+        if (e.headCm) bits.push('head ' + e.headCm + ' cm');
+        return { t: 'Measurement', d: bits.join(' · ') };
+      case 'med': return { t: e.name || 'Medicine', d: e.dose || '' };
+      case 'note': return { t: 'Note', d: e.text || '' };
+      default: return { t: String(e.type || 'Entry'), d: '' };
+    }
+  }
+  function bRow(e) {
+    var d = bDesc(e);
+    return '<li><button class="b-ti" data-t="' + bEsc(e.type) + '" data-b="edit" data-v="' + bEsc(e.id) + '"><span class="b-tt">' + bAt(e.start) + '</span><span class="b-tb"><b>' + bEsc(d.t) + '</b>' +
+      (e.running ? '<span class="b-live">live</span>' : '') + (d.d ? '<small>' + bEsc(d.d) + '</small>' : '') + (e.by ? '<small>' + bEsc(e.by) + '</small>' : '') + '</span></button></li>';
+  }
+
+  // ---- header: name, age, and whether the entries are reaching the server
+  function bPaintHead() {
+    setText(bEl.name, settings.pip.baby || 'Pip');
+    setText(bEl.age, pipAge().replace(/^ · /, ''));
+    var n = Object.keys(pip.outbox).length, t, c = '';
+    if (pip.status === 'pass') { t = 'Needs passcode'; c = 'bad'; }
+    else if (pip.status === 'address') { t = pipSrc() === 'here' ? 'Not set up' : 'Not found'; c = 'bad'; }
+    else if (pip.status === 'offline' || pip.status === 'blocked' || pip.status === 'error') { t = n ? 'Offline, ' + n + ' waiting' : 'Offline'; c = 'bad'; }
+    else if (pip.busy) { t = 'Syncing'; c = 'wait'; }
+    else if (n) { t = n + ' waiting'; c = 'wait'; }
+    else if (!pip.at) { t = 'Connecting'; c = 'wait'; }
+    else t = 'Synced';
+    setText(bEl.pillT, t);
+    bEl.pill.className = 'b-pill' + (c ? ' ' + c : '');
+    var tabs = document.querySelectorAll('.b-tab'), i;
+    for (i = 0; i < tabs.length; i++) { if (tabs[i].getAttribute('data-v') === Baby.tab) tabs[i].setAttribute('aria-current', 'page'); else tabs[i].removeAttribute('aria-current'); }
+  }
+
+  // ---- Today
+  function bHeroHtml(now) {
+    var s = pipStats(now), f = s.feed;
+    if (!f) return '<p class="b-hl">No feeds yet</p><p class="b-ht none">–</p><p class="b-hs">Tap Breast or Bottle below to start.</p>';
+    var since = now - bEnd(f), h = Math.floor(since / HOUR), m = Math.floor((since % HOUR) / MIN), d = bDesc(f);
+    var t = f.running ? pclock(now - f.start) : (h ? h + '<small>h</small> ' + bPad(m) + '<small>m</small>' : m + '<small>m</small>');
+    var out = '<p class="b-hl">' + (f.running ? 'Feeding now' : 'Since last feed') + '</p><p class="b-ht">' + t + '</p><p class="b-hs">' +
+      bEsc(f.running ? d.t + ' · started ' + bAt(f.start) : d.t + ' at ' + bAt(f.start) + (d.d ? ' · ' + d.d : '')) + '</p>';
+    if (s.next && !f.running) {
+      out += '<div class="b-sides">' + ['left', 'right'].map(function (x) {
+        return '<div class="b-side' + (x === s.next ? ' next' : '') + '"><b>' + (x === 'left' ? 'L' : 'R') + '</b>' + (x === s.next ? 'offer next' : 'last used') + '</div>';
+      }).join('') + '</div>';
+    }
+    return out;
+  }
+  function bPaintHero() {
+    var n = $('bHero');
+    if (!n) return;
+    var h = bHeroHtml(Date.now());
+    if (h !== Baby.hero || !n.firstChild) { n.innerHTML = h; Baby.hero = h; }
+  }
+  function bRunHtml() {
+    var h = '';
+    pipList().filter(function (e) { return e.running; }).forEach(function (e) {
+      var id = bEsc(e.id);
+      h += '<div class="b-run"><div class="b-rtop"><div><p class="b-rwhat">' + bEsc(BNAMES[e.type] || e.type) + ' · started ' + bAt(e.start) + '</p><p class="b-rel" data-el="' + id + '"></p></div>' +
+        '<button class="b-btn p" data-b="finish" data-v="' + id + '">Finish</button></div>';
+      if (e.type === 'breast') {
+        h += '<div class="b-sw">' + ['left', 'right'].map(function (x) {
+          return '<button data-b="side" data-v="' + x + '" aria-pressed="' + (e.side === x) + '">' + (x === 'left' ? 'Left' : 'Right') + '<span data-sd="' + id + x + '"></span></button>';
+        }).join('') + '</div>';
+      }
+      h += '</div>';
+    });
+    return h;
+  }
+  // The running timers change every second, so only their text is touched (replacing a button mid-tap would lose the tap).
+  function bTimes() {
+    var now = Date.now(), nodes = bEl.body.querySelectorAll('[data-el],[data-sd]'), i;
+    for (i = 0; i < nodes.length; i++) {
+      var a = nodes[i].getAttribute('data-el'), e, side;
+      if (a !== null) { e = pip.entries[a]; if (e) setText(nodes[i], pclock(now - e.start)); continue; }
+      a = nodes[i].getAttribute('data-sd');
+      side = a.slice(-5) === 'right' ? 'right' : 'left';
+      e = pip.entries[a.slice(0, a.length - side.length)];
+      if (e) setText(nodes[i], pclock((e[side + 'Ms'] || 0) + (e.side === side && e.sideStart ? now - e.sideStart : 0)));
+    }
+  }
+  function bKnownNames() {
+    var seen = {}, out = [];
+    pipList().forEach(function (e) { var n = String(e.by || '').trim(); if (n && n !== 'Nursery screen' && !seen[n]) { seen[n] = 1; out.push(n); } });
+    return out.slice(0, 6);
+  }
+  function bAskHtml() {
+    if (settings.pip.by !== 'Nursery screen' || load('nursery.byok')) return '';
+    var names = bKnownNames(), h = '<div class="b-ask"><p><b>Who’s logging on this device?</b></p><p class="b-soft">Shown next to everything you log, so you can both see who did what.</p>';
+    if (names.length) h += '<div class="b-chips">' + names.map(function (n) { return '<button class="b-chip" data-b="who" data-v="' + bEsc(n) + '">' + bEsc(n) + '</button>'; }).join('') + '</div>';
+    return h + '<input class="b-in" id="bWho" type="text" placeholder="Your name" autocomplete="off" aria-label="Your name"><button class="b-btn p" data-b="who">Save</button> ' +
+      '<button class="b-btn g" data-b="whoecho">This is the nursery screen</button></div>';
+  }
+  function bActsHtml() {
+    var live = { breast: pipLive('breast'), pump: pipLive('pump'), sleep: pipLive('sleep') };
+    var A = [['breast', 'Breast'], ['bottle', 'Bottle'], ['pump', live.pump ? 'Stop pump' : 'Pump'], ['nappy', 'Nappy'], ['sleep', live.sleep ? 'End sleep' : 'Sleep'], ['more', 'More']];
+    return '<div class="b-acts">' + A.map(function (a) {
+      return '<button class="b-act' + (live[a[0]] ? ' on' : '') + '" data-t="' + a[0] + '" data-b="' + a[0] + '">' + bIcon(a[0]) + '<span>' + a[1] + '</span></button>';
+    }).join('') + '</div>';
+  }
+  function bTodayHtml() {
+    var c = bCounts(bWindow24()), wt = bWetTarget(), dt = settings.pip.dirty, guide = settings.pip.guide !== false, extra = [];
+    function cls(v, t) { return guide ? (v >= t ? ' met' : ' low') : ''; }
+    if (c.bottleMl) extra.push(c.bottleMl + ' mL bottle');
+    if (c.pumpMl) extra.push(c.pumpMl + ' mL pumped');
+    if (c.breastMs) extra.push(pdur(c.breastMs) + ' at the breast');
+    var today = bOn(Date.now());
+    return bAskHtml() + '<div class="b-today"><div class="b-l"><div class="b-hero" id="bHero"></div>' + bRunHtml() + bActsHtml() +
+      '<div class="b-sh"><h2>Last 24 hours</h2><span>' + bEsc(extra.join(' · ')) + '</span></div>' +
+      '<div class="b-counts"><div class="b-count"><b>' + c.feeds + '</b><span>feeds</span></div>' +
+      '<div class="b-count' + cls(c.wet, wt) + '"><b>' + c.wet + '</b><span>wet</span></div>' +
+      '<div class="b-count' + cls(c.dirty, dt) + '"><b>' + c.dirty + '</b><span>dirty</span></div>' +
+      '<div class="b-count"><b>' + (c.sleepMs / HOUR).toFixed(1) + '</b><span>hrs sleep</span></div></div>' +
+      (guide ? '<p class="b-note">Guide: ' + wt + ' wet and ' + dt + ' dirty nappies a day. General figures only, so check them with your midwife or child and family health nurse.</p>' : '') +
+      '</div><div class="b-r"><div class="b-sh"><h2>Today</h2></div><ul class="b-list">' +
+      (today.length ? today.map(bRow).join('') : '<li><div class="b-none">Nothing logged today yet.</div></li>') + '</ul></div></div>';
+  }
+
+  // ---- Days
+  function bDaysHtml() {
+    var list = bOn(Baby.day), c = bCounts(list), isToday = bDay0(Baby.day) >= bDay0(Date.now());
+    return '<div class="b-wide"><div class="b-dn"><div><p class="b-dl">' + bEsc(bDayName(Baby.day)) + '</p><p class="b-soft">' + c.feeds + ' feeds · ' + c.wet + ' wet · ' + c.dirty + ' dirty · ' + (c.sleepMs / HOUR).toFixed(1) + ' hrs sleep</p></div>' +
+      '<button class="b-sq" data-b="prev" aria-label="Previous day">&lsaquo;</button><button class="b-sq" data-b="next" aria-label="Next day"' + (isToday ? ' disabled' : '') + '>&rsaquo;</button></div>' +
+      '<ul class="b-list">' + (list.length ? list.map(bRow).join('') : '<li><div class="b-none">Nothing logged on this day.</div></li>') + '</ul>' +
+      '<div class="b-stack" style="margin-top:1em"><button class="b-btn g" data-b="addpast">Add an entry for this day</button></div></div>';
+  }
+
+  // ---- Trends
+  function bBars(vals, colour, fmt) {
+    var max = Math.max.apply(null, [1].concat(vals.map(function (d) { return d.v; })));
+    return '<div class="b-bars" style="--bc:' + colour + '">' + vals.map(function (d) {
+      return '<div class="b-bar' + (d.v ? '' : ' zero') + '"><em>' + (d.v ? fmt(d.v) : '') + '</em><i style="height:' + Math.max(d.v / max * 74, 2) + '%"></i><span>' + d.label + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function bWeightHtml(w) {
+    if (w.length < 2) return '<h2>Weight</h2><p class="b-cap">Log two or more weights to see the line. Add one from More on the Today tab.</p>';
+    var xs = w.map(function (e) { return e.start; }), ys = w.map(function (e) { return e.weightG; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    function px(t) { return x1 === x0 ? 50 : 4 + (t - x0) / (x1 - x0) * 92; }
+    function py(v) { return y1 === y0 ? 50 : 8 + (1 - (v - y0) / (y1 - y0)) * 84; }
+    var pts = w.map(function (e) { return px(e.start).toFixed(2) + ',' + py(e.weightG).toFixed(2); }).join(' ');
+    return '<h2>Weight</h2><div class="b-line"><svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline points="' + pts +
+      '" fill="none" stroke="var(--t-nappy)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>' +
+      w.map(function (e) { return '<b style="left:' + px(e.start).toFixed(2) + '%;top:' + py(e.weightG).toFixed(2) + '%"></b>'; }).join('') + '</div>' +
+      '<p class="b-cap">' + (y0 / 1000).toFixed(3) + ' kg to ' + (y1 / 1000).toFixed(3) + ' kg, ' + dateText(new Date(x0)) + ' to ' + dateText(new Date(x1)) + '.</p>';
+  }
+  function bTrendsHtml() {
+    var days = bLastDays(7), gap = bAvgGap(), sleep = bLongestSleep(), c24 = bCounts(bWindow24()), w = bWeights(), latest = w[w.length - 1];
+    var change = w.length > 1 ? latest.weightG - w[0].weightG : null;
+    function dl(d) { return DAYS[new Date(d.ts + 12 * HOUR).getDay()].charAt(0); }
+    return '<div class="b-wide" style="max-width:none"><div class="b-sh"><h2>Patterns</h2><span>Last 7 days</span></div>' +
+      '<div class="b-stats"><div class="b-stat"><b>' + (gap ? pdur(gap) : '–') + '</b><span>Average gap between feeds</span></div>' +
+      '<div class="b-stat"><b>' + (sleep ? pdur(sleep) : '–') + '</b><span>Longest sleep this week</span></div>' +
+      '<div class="b-stat"><b>' + c24.feeds + '</b><span>Feeds in the last 24 hours</span></div>' +
+      '<div class="b-stat"><b>' + (latest ? (latest.weightG / 1000).toFixed(3) + ' kg' : '–') + '</b><span>' + (change !== null ? (change >= 0 ? '+' : '') + change + ' g since the first entry' : 'Latest weight') + '</span></div></div>' +
+      '<div class="b-charts"><div class="b-chart"><h2>Feeds a day</h2>' + bBars(days.map(function (d) { return { label: dl(d), v: bCounts(d.list).feeds }; }), 'var(--t-breast)', String) +
+      '<p class="b-cap">Counts both breast feeds and bottles.</p></div>' +
+      '<div class="b-chart"><h2>Sleep a day</h2>' + bBars(days.map(function (d) { return { label: dl(d), v: +(bCounts(d.list).sleepMs / HOUR).toFixed(1) }; }), 'var(--t-sleep)', String) +
+      '<p class="b-cap">Hours of logged sleep. Only counts sleeps you ended in the app.</p></div>' +
+      '<div class="b-chart">' + bWeightHtml(w) + '</div></div>' +
+      '<div class="b-sh"><h2>Summary for appointments</h2></div><div class="b-stack"><button class="b-btn g" data-b="summary">Build a summary to read out</button></div></div>';
+  }
+
+  // ---- Settings
+  function bSrcText() {
+    var n = Object.keys(pip.entries).length;
+    if (pipSrc() === 'here') return 'The baby’s entries are kept by this app, and every screen and phone uses them. ' + n + ' on this device.';
+    return 'The baby’s entries are still being read from and saved to the old Pip app. Bring them over first, then switch.';
+  }
+  function bSetHtml() {
+    var guide = settings.pip.guide !== false, old = String(settings.pip.host || ''), here = pipSrc() === 'here', imp = load('nursery.import');
+    var names = bKnownNames().filter(function (n) { return n !== settings.pip.by; });
+    return '<div class="b-set"><h2>This device</h2><div class="b-field"><label for="bBy">Who’s logging on this device</label>' +
+      '<input class="b-in" id="bBy" type="text" autocomplete="off" value="' + bEsc(settings.pip.by) + '"><p class="b-hint">Shown next to each entry so you can both see who logged what. Each phone sets its own.</p>' +
+      (names.length ? '<div class="b-chips">' + names.map(function (n) { return '<button class="b-chip" data-b="who" data-v="' + bEsc(n) + '">' + bEsc(n) + '</button>'; }).join('') + '</div>' : '') + '</div>' +
+      '<h2>Baby</h2><div class="b-r2"><div class="b-field"><label for="bBaby">Name</label><input class="b-in" id="bBaby" type="text" autocomplete="off" value="' + bEsc(settings.pip.baby) + '" placeholder="Pip"></div>' +
+      '<div class="b-field"><label for="bDob">Date of birth</label><input class="b-in" id="bDob" type="date" value="' + bEsc(settings.pip.dob) + '"></div></div>' +
+      '<p class="b-hint">The same on every screen and phone.</p>' +
+      '<h2>Nappy guide</h2><div class="b-chips"><button class="b-chip" data-b="guide" aria-pressed="' + guide + '">Show the 24 hour guide</button></div>' +
+      '<div class="b-r2"><div class="b-field"><label for="bWet">Wet nappies a day</label><input class="b-in" id="bWet" type="number" min="0" max="20" inputmode="numeric" value="' + settings.pip.wet + '"></div>' +
+      '<div class="b-field"><label for="bDirty">Dirty nappies a day</label><input class="b-in" id="bDirty" type="number" min="0" max="20" inputmode="numeric" value="' + settings.pip.dirty + '"></div></div>' +
+      '<p class="b-hint">In the first week the usual guide is roughly one wet nappy per day of age, so the target ramps up until day six. These are general figures, not advice about your baby. Check them against what your midwife or child and family health nurse tells you, and call them if anything worries you.</p>' +
+      '<h2>Moving over from Pip</h2><p class="b-msg" id="bSrc">' + bEsc(bSrcText()) + '</p>' +
+      '<div class="b-field"><label for="bOld">Old Pip app address</label><input class="b-in" id="bOld" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + bEsc(old) + '" placeholder="the address your phones use for Pip"></div>' +
+      '<div class="b-stack"><button class="b-btn" data-b="import"' + (Baby.imp.busy ? ' disabled' : '') + '>Bring Pip’s data over</button>' +
+      (here ? (old ? '<button class="b-btn g" data-b="useold">Go back to the old Pip</button>' : '') : '<button class="b-btn p" data-b="usehere">Use this app from now on</button>') + '</div>' +
+      '<p class="b-msg" id="bImp"></p>' +
+      '<p class="b-hint">Bringing the data over only reads the old Pip and copies its entries here. It never changes or deletes anything in the old app, and it is safe to press again to catch up on anything logged there since. Keep the old Pip running until you are sure everything is here. ' +
+      (imp && imp.at ? 'Last brought over ' + bEsc(dateText(new Date(imp.at)) + ' at ' + bAt(imp.at)) + ' (' + (imp.count || 0) + ' entries).' : '') + '</p>' +
+      '<h2>Your data</h2><div class="b-stack"><button class="b-btn" data-b="sync">Sync now</button><button class="b-btn" data-b="export-json">Download a backup</button>' +
+      '<button class="b-btn" data-b="export-csv">Download a spreadsheet</button><button class="b-btn d" data-b="reload">Reload this device’s copy</button></div>' +
+      '<p class="b-hint">Reloading only clears what this device has already synced and fetches it again. Anything not yet sent is kept.</p></div>';
+  }
+  function bPaintImp() {
+    var n = $('bImp'), s = $('bSrc');
+    if (n) setText(n, Baby.imp.msg || '');
+    if (s) setText(s, bSrcText());
+  }
+
+  // ---- the page
+  Baby.paint = function (force) {
+    if (Pager.at !== 2 && !force) { Baby.stale = true; return; }
+    Baby.stale = false;
+    bPaintHead();
+    // A finger is down: leave the page alone so the thing being tapped is still there when the tap lands
+    // (leaving a typed field saves it and would otherwise redraw the button out from under the tap).
+    if (Baby.press && !force) { Baby.late = true; return; }
+    if (!pipOn()) {
+      bEl.body.innerHTML = '<div class="b-wide"><div class="b-none">The baby tracker needs this site’s own address (the one on Netlify), not the sensor pod’s.</div></div>';
+      Baby.html = '';
+      return;
+    }
+    var a = document.activeElement, typing = !!(a && bEl.body.contains(a) && /^(INPUT|TEXTAREA)$/.test(a.tagName));
+    var html = Baby.tab === 'today' ? bTodayHtml() : Baby.tab === 'days' ? bDaysHtml() : Baby.tab === 'trends' ? bTrendsHtml() : bSetHtml();
+    if (html !== Baby.html && !typing) {
+      var top = bEl.body.scrollTop;
+      bEl.body.innerHTML = html; bEl.body.scrollTop = top;
+      Baby.html = html; Baby.hero = '';
+    }
+    if (Baby.tab === 'today') { bPaintHero(); bTimes(); }
+    if (Baby.tab === 'settings') bPaintImp();
+  };
+  Baby.tick = function () {
+    if (Pager.at !== 2 || document.hidden) return;
+    var m = Math.floor(Date.now() / MIN);
+    if (m !== Baby.minute) { Baby.minute = m; Baby.paint(); }
+    if (Baby.tab === 'today') { bPaintHero(); bTimes(); }
+    bPaintHead();
+  };
+  function bTyping() { var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && (bEl.body.contains(a) || bEl.sheet.contains(a))); }
+
+  // ---- sheets
+  function bOpenSheet(html) {
+    bEl.sheetBody.innerHTML = html; Baby.sheet = true;
+    bEl.scrim.classList.add('open'); bEl.sheet.classList.add('open'); bEl.sheet.scrollTop = 0;
+  }
+  function bCloseSheet() {
+    Baby.sheet = false; Baby.bt = null; Baby.confirm = '';
+    bEl.scrim.classList.remove('open'); bEl.sheet.classList.remove('open');
+    document.documentElement.style.setProperty('--kb', '0px');
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    Baby.paint();
+  }
+  function bTimeField(id, when, label) {
+    return '<div class="b-field"><label for="' + id + '">' + (label || 'Time') + '</label><input class="b-in" id="' + id + '" type="datetime-local" value="' + bInput(when || Date.now()) + '"' + (when ? ' data-touched="1"' : '') + '></div>';
+  }
+  // The time in a sheet, unless it was never touched, in which case it is the moment of saving.
+  function bTimeVal(id) {
+    var n = $(id), t = n && n.value && n.getAttribute('data-touched') ? new Date(n.value).getTime() : NaN;
+    return isFinite(t) ? t : Date.now();
+  }
+  function bNum(id) { var n = $(id); return n ? (+n.value || 0) : 0; }
+  function bReady() {
+    if (logReady()) return true;
+    toast(!logOn() ? 'Logging is switched off on this screen. Turn it on in Menu, Settings.'
+      : pip.status === 'pass' ? 'This site needs its passcode. Enter it in Menu, Settings.'
+      : pip.status === 'address' ? 'The tracker isn’t set up on this site yet. Redeploy it from GitHub.'
+      : 'Waiting for the server, so a feed already running on another phone isn’t missed.', false);
+    return false;
+  }
+
+  function bBottleSheet(when) {
+    var last = pipLast('bottle');
+    Baby.bt = { ml: last && last.ml > 0 ? Math.min(400, last.ml) : 60, kind: last && last.kind === 'formula' ? 'formula' : 'expressed' };
+    bOpenSheet('<h3>Bottle</h3><div class="b-step"><button class="b-sq" data-b="ml" data-v="-10" aria-label="Less">&minus;</button><div class="b-val" id="bMl"></div>' +
+      '<button class="b-sq" data-b="ml" data-v="10" aria-label="More">+</button></div>' +
+      '<div class="b-chips"><button class="b-chip" data-b="kind" data-v="expressed">Expressed</button><button class="b-chip" data-b="kind" data-v="formula">Formula</button></div>' +
+      bTimeField('bTime', when) + '<div class="b-row"><button class="b-btn g" data-b="cancel">Cancel</button><button class="b-btn p" data-b="bottle-save">Save bottle</button></div>');
+    bBottlePaint();
+  }
+  function bBottlePaint() {
+    if (!Baby.bt) return;
+    $('bMl').innerHTML = Baby.bt.ml + '<em>mL</em>';
+    var c = bEl.sheet.querySelectorAll('[data-b="kind"]'), i;
+    for (i = 0; i < c.length; i++) c[i].setAttribute('aria-pressed', String(c[i].getAttribute('data-v') === Baby.bt.kind));
+  }
+  function bNappySheet(when) {
+    bOpenSheet('<h3>Nappy</h3><div class="b-chips"><button class="b-chip" data-b="nappy-pick" data-v="wet">Wet</button><button class="b-chip" data-b="nappy-pick" data-v="dirty">Dirty</button>' +
+      '<button class="b-chip" data-b="nappy-pick" data-v="both">Both</button></div><p class="b-hint">Tap one to log it straight away.</p>' + bTimeField('bTime', when) +
+      '<div class="b-row"><button class="b-btn g" data-b="cancel">Cancel</button></div>');
+  }
+  function bPumpSheet(e) {
+    Baby.bt = { id: e.id };
+    bOpenSheet('<h3>Pump finished</h3><p class="b-hint">' + pdur(Date.now() - e.start) + ' from ' + bAt(e.start) + '. How much came out? Skip if you didn’t measure.</p>' +
+      '<div class="b-r2"><div class="b-field"><label for="bpL">Left (mL)</label><input class="b-in" id="bpL" type="number" inputmode="numeric" min="0" max="500" value="' + (e.leftMl || '') + '"></div>' +
+      '<div class="b-field"><label for="bpR">Right (mL)</label><input class="b-in" id="bpR" type="number" inputmode="numeric" min="0" max="500" value="' + (e.rightMl || '') + '"></div></div>' +
+      '<div class="b-row"><button class="b-btn g" data-b="pump-skip">Skip</button><button class="b-btn p" data-b="pump-save">Save</button></div>');
+  }
+  function bMoreSheet(when) {
+    Baby.bt = { when: when || 0 };
+    bOpenSheet('<h3>Something else</h3><div class="b-stack"><button class="b-btn" data-b="more-pick" data-v="growth">Weight, length or head</button><button class="b-btn" data-b="more-pick" data-v="med">Medicine or vitamins</button>' +
+      '<button class="b-btn" data-b="more-pick" data-v="note">Note</button></div><div class="b-row"><button class="b-btn g" data-b="cancel">Cancel</button></div>');
+  }
+  function bGrowthSheet(when) {
+    bOpenSheet('<h3>Measurement</h3><div class="b-field"><label for="bgW">Weight (grams)</label><input class="b-in" id="bgW" type="number" inputmode="numeric" min="0" max="30000" placeholder="for example 3450"></div>' +
+      '<div class="b-r2"><div class="b-field"><label for="bgL">Length (cm)</label><input class="b-in" id="bgL" type="number" inputmode="decimal" step="0.1" min="0" max="150"></div>' +
+      '<div class="b-field"><label for="bgH">Head (cm)</label><input class="b-in" id="bgH" type="number" inputmode="decimal" step="0.1" min="0" max="80"></div></div>' + bTimeField('bTime', when, 'When') +
+      '<div class="b-row"><button class="b-btn g" data-b="cancel">Cancel</button><button class="b-btn p" data-b="growth-save">Save</button></div>');
+  }
+  function bMedSheet(when) {
+    bOpenSheet('<h3>Medicine</h3><div class="b-field"><label for="bmN">What</label><input class="b-in" id="bmN" type="text" placeholder="for example Vitamin D drops" autocomplete="off"></div>' +
+      '<div class="b-field"><label for="bmD">Dose</label><input class="b-in" id="bmD" type="text" placeholder="for example 0.5 mL" autocomplete="off"></div>' + bTimeField('bTime', when, 'When') +
+      '<div class="b-row"><button class="b-btn g" data-b="cancel">Cancel</button><button class="b-btn p" data-b="med-save">Save</button></div>');
+  }
+  function bNoteSheet(when) {
+    bOpenSheet('<h3>Note</h3><div class="b-field"><textarea class="b-in" id="bnT" rows="4" placeholder="Anything worth remembering"></textarea></div>' + bTimeField('bTime', when, 'When') +
+      '<div class="b-row"><button class="b-btn g" data-b="cancel">Cancel</button><button class="b-btn p" data-b="note-save">Save</button></div>');
+  }
+  function bPastSheet() {
+    var when = bDay0(Baby.day) === bDay0(Date.now()) ? Date.now() : bDay0(Baby.day) + 12 * HOUR;
+    Baby.bt = { when: when };
+    bOpenSheet('<h3>Add to ' + bEsc(bDayName(Baby.day)) + '</h3><div class="b-stack"><button class="b-btn" data-b="past-pick" data-v="bottle">Bottle</button><button class="b-btn" data-b="past-pick" data-v="nappy">Nappy</button>' +
+      '<button class="b-btn" data-b="past-pick" data-v="growth">Measurement</button><button class="b-btn" data-b="past-pick" data-v="note">Note</button></div><div class="b-row"><button class="b-btn g" data-b="cancel">Cancel</button></div>');
+  }
+  function bEditSheet(id) {
+    var e = pip.entries[id];
+    if (!e || e.deleted) return;
+    var d = bDesc(e), endEdit = (e.type === 'breast' || e.type === 'sleep' || e.type === 'pump') && e.end;
+    Baby.bt = { id: id };
+    bOpenSheet('<h3>' + bEsc(d.t) + '</h3><p class="b-hint">' + bEsc(d.d) + (e.by ? ' · logged by ' + bEsc(e.by) : '') + '</p>' + bTimeField('bTime', e.start, 'Started') +
+      (endEdit ? bTimeField('bEnd', e.end, 'Finished') : '') +
+      (e.type === 'bottle' ? '<div class="b-field"><label for="beMl">Amount (mL)</label><input class="b-in" id="beMl" type="number" inputmode="numeric" value="' + (e.ml || 0) + '"></div>' : '') +
+      (e.type === 'nappy' ? '<div class="b-chips"><button class="b-chip" data-b="nappy-edit" data-v="wet" aria-pressed="' + (!!e.wet && !e.dirty) + '">Wet</button><button class="b-chip" data-b="nappy-edit" data-v="dirty" aria-pressed="' + (!!e.dirty && !e.wet) + '">Dirty</button>' +
+        '<button class="b-chip" data-b="nappy-edit" data-v="both" aria-pressed="' + (!!e.dirty && !!e.wet) + '">Both</button></div>' : '') +
+      (e.type === 'note' ? '<div class="b-field"><label for="beT">Note</label><textarea class="b-in" id="beT" rows="3">' + bEsc(e.text || '') + '</textarea></div>' : '') +
+      (e.type === 'med' ? '<div class="b-field"><label for="beN">What</label><input class="b-in" id="beN" type="text" value="' + bEsc(e.name || '') + '"></div><div class="b-field"><label for="beD">Dose</label><input class="b-in" id="beD" type="text" value="' + bEsc(e.dose || '') + '"></div>' : '') +
+      '<div class="b-row"><button class="b-btn d" data-b="edit-del">Delete</button><button class="b-btn p" data-b="edit-save">Save changes</button></div>' +
+      '<div class="b-row"><button class="b-btn g" data-b="cancel">Cancel</button></div>');
+    Baby.bt.nappy = e.type === 'nappy' ? (e.wet && e.dirty ? 'both' : (e.dirty ? 'dirty' : 'wet')) : '';
+  }
+  function bSummarySheet() {
+    var c24 = bCounts(bWindow24()), days = bLastDays(7).map(function (d) { return bCounts(d.list); });
+    function avg(k) { return days.reduce(function (s, c) { return s + c[k]; }, 0) / days.length; }
+    var w = bWeights(), latest = w[w.length - 1], gap = bAvgGap(), age = pipAge().replace(/^ · /, '');
+    var lines = [
+      (settings.pip.baby || 'Baby') + (age ? ', ' + age : ''),
+      'Last 24 hours: ' + c24.feeds + ' feeds, ' + c24.wet + ' wet nappies, ' + c24.dirty + ' dirty, ' + (c24.sleepMs / HOUR).toFixed(1) + ' hours of logged sleep.',
+      c24.bottleMl ? 'Bottles: ' + c24.bottleMl + ' mL in 24 hours.' : '',
+      c24.breastMs ? 'Time at the breast: ' + pdur(c24.breastMs) + ' in 24 hours.' : '',
+      gap ? 'Average gap between feeds: ' + pdur(gap) + '.' : '',
+      'Seven day average: ' + avg('feeds').toFixed(1) + ' feeds, ' + avg('wet').toFixed(1) + ' wet, ' + avg('dirty').toFixed(1) + ' dirty a day.',
+      latest ? 'Latest weight: ' + (latest.weightG / 1000).toFixed(3) + ' kg on ' + dateText(new Date(latest.start)) + '.' : '',
+      w.length > 1 ? 'Change since the first weight logged: ' + (latest.weightG - w[0].weightG >= 0 ? '+' : '') + (latest.weightG - w[0].weightG) + ' g.' : ''
+    ].filter(Boolean);
+    Baby.bt = { text: lines.join('\n') };
+    bOpenSheet('<h3>Summary</h3><div class="b-field"><textarea class="b-in" id="bsT" rows="9" readonly>' + bEsc(Baby.bt.text) + '</textarea></div>' +
+      '<div class="b-row"><button class="b-btn g" data-b="cancel">Close</button><button class="b-btn p" data-b="sum-copy">Copy</button></div>');
+  }
+
+  // ---- logging (the same outbox and undo as the Log screen)
+  function bFinish(id) {
+    if (!bReady()) return;
+    var e0 = pip.entries[id];
+    if (!e0 || e0.deleted || !e0.running) return;
+    if (e0.type === 'pump') { bPumpSheet(e0); return; }
+    fresh(function () {
+      var e = pip.entries[id], now = Date.now();
+      if (!e || e.deleted || !e.running) return;
+      doLog(function (a) {
+        a.edit(e, function (x) {
+          if (x.type === 'breast' && x.sideStart) {
+            var spent = now - x.sideStart;
+            if (x.side === 'left') x.leftMs = (x.leftMs || 0) + spent;
+            if (x.side === 'right') x.rightMs = (x.rightMs || 0) + spent;
+            x.sideStart = null;
+          }
+          x.end = now; x.running = false;
+        });
+        return e.type === 'breast' ? 'Feed saved, ' + pdur((e.leftMs || 0) + (e.rightMs || 0)) : (BNAMES[e.type] || 'Entry') + ' saved, ' + pdur(now - e.start);
+      });
+    });
+  }
+  function bFinishPump(withMl) {
+    var e = pip.entries[Baby.bt && Baby.bt.id];
+    if (!e || !e.running) { bCloseSheet(); return; }
+    var l = bNum('bpL'), r = bNum('bpR'), now = Date.now();
+    bCloseSheet();
+    doLog(function (a) {
+      a.edit(e, function (x) { x.end = now; x.running = false; if (withMl) { x.leftMl = l; x.rightMl = r; } });
+      return 'Pump saved';
+    });
+  }
+  function bSaveEdit() {
+    var e = pip.entries[Baby.bt && Baby.bt.id];
+    if (!e) { bCloseSheet(); return; }
+    var s = $('bTime') ? new Date($('bTime').value).getTime() : NaN, en = $('bEnd') ? new Date($('bEnd').value).getTime() : NaN;
+    var ml = $('beMl') ? bNum('beMl') : null, text = $('beT') ? $('beT').value.trim() : null, kind = Baby.bt.nappy;
+    var name = $('beN') ? $('beN').value.trim() : null, dose = $('beD') ? $('beD').value.trim() : null;
+    bCloseSheet();
+    doLog(function (a) {
+      a.edit(e, function (x) {
+        if (isFinite(s)) x.start = s;
+        if (isFinite(en) && en >= x.start) x.end = en;
+        if (ml !== null) x.ml = ml;
+        if (text !== null) x.text = text;
+        if (name !== null && name) x.name = name;
+        if (dose !== null) x.dose = dose;
+        if (kind) { x.wet = kind !== 'dirty'; x.dirty = kind !== 'wet'; }
+      });
+      return 'Updated';
+    });
+  }
+
+  // ---- exports
+  // A home-screen app on iOS ignores a link's download attribute, so offer the share sheet first (Save to Files,
+  // Mail, Messages) and fall back to a normal download.
+  function bDownload(name, text, type) {
+    var file = null;
+    try { file = new File([text], name, { type: type }); } catch (e) { /* no File constructor */ }
+    var tryShare = file && navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share;
+    function plain() {
+      var url = URL.createObjectURL(new Blob([text], { type: type })), a = document.createElement('a');
+      a.href = url; a.download = name; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+    }
+    if (tryShare) navigator.share({ files: [file], title: name }).catch(function (e) { if (!e || e.name !== 'AbortError') plain(); });
+    else plain();
+  }
+  function bStamp() { var d = new Date(); return d.getFullYear() + '-' + bPad(d.getMonth() + 1) + '-' + bPad(d.getDate()); }
+  function bExportJson() {
+    bDownload('baby-' + bStamp() + '.json', JSON.stringify({ exported: new Date().toISOString(), baby: settings.pip.baby || '', dob: settings.pip.dob || '', entries: pipList() }, null, 2), 'application/json');
+  }
+  function bExportCsv() {
+    var cols = ['date', 'time', 'type', 'detail', 'duration_min', 'ml', 'logged_by'];
+    var rows = pipList().slice().sort(function (a, b) { return a.start - b.start; }).map(function (e) {
+      var d = bDesc(e), x = new Date(e.start), ml = e.ml || ((e.leftMl || 0) + (e.rightMl || 0)) || '';
+      return [x.getDate() + '/' + (x.getMonth() + 1) + '/' + x.getFullYear(), bPad(x.getHours()) + ':' + bPad(x.getMinutes()) + ':' + bPad(x.getSeconds()), e.type, d.d, e.end ? Math.round((e.end - e.start) / MIN) : '', ml, e.by || '']
+        .map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(',');
+    });
+    bDownload('baby-' + bStamp() + '.csv', [cols.join(',')].concat(rows).join('\n'), 'text/csv');
+  }
+
+  // ---- bringing the old Pip's entries over
+  function bHdr(json) { var h = {}; if (sync.pass) h['x-nursery-pass'] = sync.pass; if (json) h['content-type'] = 'application/json'; return h; }
+  function bCall(url, opts, where) {
+    var ctrl = window.AbortController ? new AbortController() : null, timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 45000);
+    opts.cache = 'no-store'; opts.signal = ctrl ? ctrl.signal : undefined;
+    return fetch(url, opts).then(function (r) {
+      clearTimeout(timer);
+      if (!r.ok) { var err = new Error('HTTP ' + r.status); err.status = r.status; err.where = where; throw err; }
+      return r.json().catch(function () { var err = new Error('shape'); err.where = where; err.status = 0; throw err; });
+    }, function (e) { clearTimeout(timer); e.where = where; e.status = 0; throw e; });
+  }
+  function bImpWords(e) {
+    if (e && e.where === 'old') return e.status === 401 ? 'The old Pip is locked with a passcode. Enter it in Menu, Settings, Pip (the old app), then try again. Nothing was changed.' : e.status === 404 ? 'No Pip app found at that address. Check it is the address your phones use.' : e.status ? 'The old Pip answered with an error (' + e.status + '). Nothing was changed.' : 'Couldn’t reach the old Pip. Check the address and the Wi-Fi. Nothing was changed.';
+    if (e && e.where === 'own') return e.status === 401 ? 'This site is locked with a passcode. Enter it in Menu, Settings, Shared settings first.' : e.status === 404 ? 'This site doesn’t have the new sync function yet. Redeploy it from GitHub, then try again.' : 'Couldn’t save to this app' + (e.status ? ' (error ' + e.status + ')' : '') + '. Try again.';
+    return 'Something went wrong. Nothing in the old Pip was changed. Try again.';
+  }
+  function bImport() {
+    var imp = Baby.imp, old = pipOldOrigin();
+    if (imp.busy) return;
+    if (!old) { imp.msg = 'Type the old Pip address in the box above first.'; bPaintImp(); return; }
+    if (old === location.origin) { imp.msg = 'That is this site’s own address. Type the address of the old Pip app.'; bPaintImp(); return; }
+    imp.busy = true; imp.msg = 'Reading the old Pip…'; Baby.html = ''; Baby.paint();
+    var list = [], CH = 200;
+    function copy(i) {
+      if (i >= list.length) return Promise.resolve();
+      return bCall('/api/sync', { method: 'POST', headers: bHdr(true), body: JSON.stringify({ since: 9007199254740991, entries: list.slice(i, i + CH) }) }, 'own').then(function () {
+        imp.msg = 'Copied ' + Math.min(i + CH, list.length) + ' of ' + list.length + '…'; bPaintImp();
+        return copy(i + CH);
+      });
+    }
+    bCall(old + '/api/sync?since=0', { headers: settings.pip.pass ? { 'x-pip-pass': settings.pip.pass } : {} }, 'old').then(function (d) {
+      if (!d || !Array.isArray(d.entries)) { var err = new Error('shape'); err.where = 'old'; err.status = 404; throw err; }
+      list = d.entries.filter(function (e) { return e && typeof e.id === 'string' && typeof e.type === 'string'; });
+      if (!list.length) { imp.msg = 'The old Pip has no entries to bring over yet.'; return null; }
+      imp.msg = 'Found ' + list.length + ' entries in the old Pip. Copying…'; bPaintImp();
+      return copy(0).then(function () { return bCall('/api/sync?since=0', { headers: bHdr(false) }, 'own'); }).then(function (mine) {
+        var have = {}, missing = 0, live = 0;
+        (mine.entries || []).forEach(function (e) { have[e.id] = e.updated || 0; if (!e.deleted) live++; });
+        list.forEach(function (e) { if (!(e.id in have) || have[e.id] < (e.updated || 0)) missing++; });
+        if (missing) { imp.msg = missing + ' of ' + list.length + ' entries didn’t arrive. Press the button again.'; return null; }
+        save('nursery.import', { at: Date.now(), count: list.length });
+        imp.msg = 'Done. All ' + list.length + ' entries from the old Pip are in this app (' + live + ' entries here in total). Nothing in the old Pip was changed.' +
+          (pipSrc() === 'here' ? '' : ' Press “Use this app from now on” when you are ready.');
+        return true;
+      });
+    }).catch(function (e) { imp.msg = bImpWords(e); }).then(function () {
+      imp.busy = false; Baby.html = ''; pipLoad(); Baby.paint();
+    });
+  }
+  function bSwitch(to) {
+    if (Baby.confirm !== to) {
+      Baby.confirm = to; clearTimeout(Baby.confirmTimer);
+      Baby.confirmTimer = setTimeout(function () { Baby.confirm = ''; Baby.html = ''; Baby.paint(); }, 5000);
+      var b = bEl.body.querySelector('[data-b="' + (to === 'here' ? 'usehere' : 'useold') + '"]');
+      if (b) b.textContent = to === 'here' ? 'Tap again to switch every screen' : 'Tap again to go back to Pip';
+      return;
+    }
+    Baby.confirm = ''; clearTimeout(Baby.confirmTimer);
+    settings.pip.src = to; saveSettings();
+    Baby.imp.msg = to === 'here' ? 'Switched. Every screen and phone now uses this app for the baby’s entries.' : 'Switched back to the old Pip.';
+    pip.status = 'idle'; Baby.html = ''; render(); pipLoad(); Baby.paint();
+  }
+
+  // ---- taps
+  function bAct(a, node) {
+    var v = node.getAttribute('data-v'), bt = Baby.bt, n;
+    switch (a) {
+      case 'tab': Baby.tab = v; Baby.html = ''; Baby.confirm = ''; bEl.body.scrollTop = 0; Baby.paint(); break;
+      case 'menu': showControls(true); break;
+      case 'pill': pipLoad(); break;
+      case 'breast':
+        if (!bReady()) break;
+        if (pipLive('breast')) toast('A feed is already running', false); else startBreast(nextSideNow(), true);
+        break;
+      case 'bottle': if (bReady()) bBottleSheet(); break;
+      case 'nappy': if (bReady()) bNappySheet(); break;
+      case 'more': if (bReady()) bMoreSheet(); break;
+      case 'sleep': if (bReady()) toggleSleep(); break;
+      case 'pump': { if (!bReady()) break; var p = pipLive('pump'); if (p) bFinish(p.id); else startPump(); break; }
+      case 'finish': bFinish(v); break;
+      case 'side': if (bReady()) switchSide(v); break;
+      case 'edit': bEditSheet(v); break;
+      case 'prev': Baby.day = addDays(bDay0(Baby.day), -1) + 12 * HOUR; Baby.paint(); break;
+      case 'next': Baby.day = addDays(bDay0(Baby.day), 1) + 12 * HOUR; if (bDay0(Baby.day) > bDay0(Date.now())) Baby.day = Date.now(); Baby.paint(); break;
+      case 'addpast': if (bReady()) bPastSheet(); break;
+      case 'summary': bSummarySheet(); break;
+      case 'who':
+        n = v || ($('bWho') && $('bWho').value.trim());
+        if (!n) { toast('Type your name first', false); break; }
+        settings.pip.by = n.slice(0, 40); save('nursery.byok', true); saveSettings(); Baby.html = ''; Baby.paint(); toast('Logging as ' + n, false);
+        break;
+      case 'whoecho': save('nursery.byok', true); Baby.html = ''; Baby.paint(); break;
+      case 'guide': settings.pip.guide = settings.pip.guide === false; saveSettings(); Baby.html = ''; Baby.paint(); break;
+      case 'import': bImport(); break;
+      case 'usehere': bSwitch('here'); break;
+      case 'useold': bSwitch('old'); break;
+      case 'sync': pipLoad(); toast('Syncing', false); break;
+      case 'export-json': bExportJson(); break;
+      case 'export-csv': bExportCsv(); break;
+      case 'reload':
+        if (Baby.confirm !== 'reload') { Baby.confirm = 'reload'; clearTimeout(Baby.confirmTimer); Baby.confirmTimer = setTimeout(function () { Baby.confirm = ''; Baby.html = ''; Baby.paint(); }, 5000); node.textContent = 'Tap again to reload'; break; }
+        Baby.confirm = '';
+        (function () {
+          var keep = {};
+          Object.keys(pip.outbox).forEach(function (id) { if (pip.entries[id]) keep[id] = pip.entries[id]; });
+          pip.entries = keep; pip.cursor = 0; pip.at = 0; pip.rev++; pip.status = 'idle'; pipStore(true);
+          Baby.html = ''; pipLoad(); Baby.paint(); toast('Reloading from the server', false);
+        })();
+        break;
+      // sheets
+      case 'cancel': bCloseSheet(); break;
+      case 'ml': if (bt) { bt.ml = clamp(bt.ml + (+v), 0, 400); bBottlePaint(); } break;
+      case 'kind': if (bt) { bt.kind = v; bBottlePaint(); } break;
+      case 'bottle-save':
+        if (!bt || !bReady()) break;
+        (function () {
+          var ml = bt.ml, kind = bt.kind, at = bTimeVal('bTime');
+          bCloseSheet();
+          doLog(function (x) { x.add('bottle', { start: at, ml: ml, kind: kind }); return 'Bottle, ' + ml + ' mL'; });
+        })();
+        break;
+      case 'nappy-pick':
+        if (!bReady()) break;
+        (function () {
+          var at = bTimeVal('bTime');
+          bCloseSheet();
+          doLog(function (x) { x.add('nappy', { start: at, wet: v !== 'dirty', dirty: v !== 'wet' }); return 'Nappy, ' + (v === 'both' ? 'wet and dirty' : v); });
+        })();
+        break;
+      case 'nappy-edit':
+        if (bt) { bt.nappy = v; var cs = bEl.sheet.querySelectorAll('[data-b="nappy-edit"]'), i; for (i = 0; i < cs.length; i++) cs[i].setAttribute('aria-pressed', String(cs[i].getAttribute('data-v') === v)); }
+        break;
+      case 'pump-save': bFinishPump(true); break;
+      case 'pump-skip': bFinishPump(false); break;
+      case 'more-pick': {
+        var when = bt && bt.when;
+        if (v === 'growth') bGrowthSheet(when); else if (v === 'med') bMedSheet(when); else bNoteSheet(when);
+        break;
+      }
+      case 'past-pick': {
+        var w = bt && bt.when;
+        if (v === 'bottle') bBottleSheet(w); else if (v === 'nappy') bNappySheet(w); else if (v === 'growth') bGrowthSheet(w); else bNoteSheet(w);
+        break;
+      }
+      case 'growth-save':
+        if (!bReady()) break;
+        (function () {
+          var wg = bNum('bgW'), lc = bNum('bgL'), hc = bNum('bgH'), at = bTimeVal('bTime');
+          if (!wg && !lc && !hc) { toast('Fill in at least one', false); return; }
+          bCloseSheet();
+          doLog(function (x) { x.add('growth', { start: at, weightG: wg, lengthCm: lc, headCm: hc }); return 'Measurement saved'; });
+        })();
+        break;
+      case 'med-save':
+        if (!bReady()) break;
+        (function () {
+          var name = $('bmN').value.trim(), dose = $('bmD').value.trim(), at = bTimeVal('bTime');
+          if (!name) { toast('Give it a name', false); return; }
+          bCloseSheet();
+          doLog(function (x) { x.add('med', { start: at, name: name, dose: dose }); return 'Saved'; });
+        })();
+        break;
+      case 'note-save':
+        if (!bReady()) break;
+        (function () {
+          var text = $('bnT').value.trim(), at = bTimeVal('bTime');
+          if (!text) { bCloseSheet(); return; }
+          bCloseSheet();
+          doLog(function (x) { x.add('note', { start: at, text: text }); return 'Note saved'; });
+        })();
+        break;
+      case 'edit-save': if (bReady()) bSaveEdit(); break;
+      case 'edit-del':
+        if (Baby.confirm !== 'del') { Baby.confirm = 'del'; node.textContent = 'Tap again to delete'; break; }
+        if (!bReady()) break;
+        (function () {
+          var e = pip.entries[bt && bt.id];
+          bCloseSheet();
+          if (e) doLog(function (x) { x.edit(e, function (y) { y.deleted = true; }); return 'Deleted'; });
+        })();
+        break;
+      case 'sum-copy':
+        if (bt) {
+          var done = function () { toast('Copied', false); };
+          var ta = $('bsT');
+          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(bt.text).then(done, function () { ta.select(); toast('Select and copy', false); });
+          else { ta.select(); toast('Select and copy', false); }
+        }
+        break;
+    }
+  }
+  function bClick(e) {
+    var b = e.target.closest ? e.target.closest('[data-b]') : null;
+    if (!b || b.disabled) return;
+    bAct(b.getAttribute('data-b'), b);
+  }
+  function bRelease() {
+    clearTimeout(Baby.pressTimer);
+    Baby.pressTimer = setTimeout(function () { Baby.press = false; if (Baby.late) { Baby.late = false; Baby.paint(); } }, 80);
+  }
+  bEl.body.addEventListener('pointerdown', function () {
+    Baby.press = true; clearTimeout(Baby.pressTimer);
+    Baby.pressTimer = setTimeout(bRelease, 2500);
+  }, true);
+  document.addEventListener('pointerup', function () { if (Baby.press) bRelease(); }, true);
+  document.addEventListener('pointercancel', function () { if (Baby.press) bRelease(); }, true);
+  // A tap that completes is over at once (so what it did is drawn without waiting); the timer above only covers a press that never becomes a click.
+  document.addEventListener('click', function () {
+    if (!Baby.press) return;
+    clearTimeout(Baby.pressTimer); Baby.press = false;
+    if (Baby.late) { Baby.late = false; Baby.paint(); }
+  }, false);
+  bEl.body.addEventListener('click', bClick);
+  bEl.sheet.addEventListener('click', bClick);
+  document.querySelector('.b-head').addEventListener('click', bClick);
+  bEl.scrim.addEventListener('click', bCloseSheet);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && Baby.sheet) bCloseSheet(); });
+  // A time that was changed by hand is used as it is. One left alone becomes the moment of saving.
+  bEl.sheet.addEventListener('input', function (e) { if (e.target && e.target.type === 'datetime-local') e.target.setAttribute('data-touched', '1'); });
+  bEl.sheet.addEventListener('change', function (e) { if (e.target && e.target.type === 'datetime-local') e.target.setAttribute('data-touched', '1'); });
+  // Typed settings are saved as soon as the field is left.
+  bEl.body.addEventListener('change', function (e) {
+    var t = e.target, id = t && t.id, v = t ? t.value : '';
+    if (id === 'bBy') { settings.pip.by = v.trim().slice(0, 40) || 'Nursery screen'; save('nursery.byok', true); }
+    else if (id === 'bBaby') settings.pip.baby = v.trim().slice(0, 40);
+    else if (id === 'bDob') settings.pip.dob = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
+    else if (id === 'bWet') settings.pip.wet = clamp(Math.round(+v || 0), 0, 20);
+    else if (id === 'bDirty') settings.pip.dirty = clamp(Math.round(+v || 0), 0, 20);
+    else if (id === 'bOld') { settings.pip.host = v.trim().slice(0, 200); pip.status = 'idle'; }
+    else return;
+    saveSettings(); render(); Baby.html = '';
+    // Redraw once focus has landed on whatever was tapped next (the next field, say), so it isn't swapped out from under it.
+    setTimeout(function () { Baby.paint(); }, 0);
+    if (id === 'bOld') pipLoad();
+  });
+  // The sheet sits on top of the keyboard on a phone instead of behind it.
+  (function () {
+    var vv = window.visualViewport;
+    if (!vv) return;
+    function lift() {
+      if (!Baby.sheet) { document.documentElement.style.setProperty('--kb', '0px'); return; }
+      document.documentElement.style.setProperty('--kb', Math.round(Math.max(0, window.innerHeight - vv.height - vv.offsetTop)) + 'px');
+    }
+    vv.addEventListener('resize', lift); vv.addEventListener('scroll', lift);
+    document.addEventListener('focusin', function (e) {
+      if (!e.target.closest || !e.target.closest('#bSheet')) return;
+      setTimeout(function () { lift(); if (e.target.scrollIntoView) e.target.scrollIntoView({ block: 'center' }); }, 300);
+    });
+  })();
+
   // ---------- upkeep ----------
   // Shift everything a few pixels every couple of minutes so nothing sits still on the screen for months.
   function nudge() {
@@ -3036,13 +4049,13 @@ body.night .dots .dot.on{opacity:.45}
       var tag = r.headers.get('etag') || r.headers.get('last-modified');
       if (!r.ok || !tag) return;
       if (pageTag === null) { pageTag = tag; return; }
-      var busy = Sound.playing || Light.on || Feed.on || Log.on || (Frame.on && !Frame.auto) || openOverlay || el.controls.classList.contains('show');
+      var busy = Sound.playing || Light.on || Feed.on || Log.on || (Frame.on && !Frame.auto) || openOverlay || el.controls.classList.contains('show') || Baby.sheet || bTyping();
       if (tag !== pageTag && !busy && modeNow(new Date()) === 'day') location.reload();
     }).catch(function () { /* offline; try again later */ });
   }
 
   document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { render(); pipLoad(); syncSoon(0); homeCalCheck(); } });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { frameTouched(); render(); pipLoad(); syncSoon(0); homeCalCheck(); } });
   window.addEventListener('online', function () { loadWeather(); loadAir(); pipLoad(); syncSoon(0); homeCalCheck(); });
 
   render();
@@ -3055,10 +4068,11 @@ body.night .dots .dot.on{opacity:.45}
   syncSoon(500);
   show(el.familyBtn, syncShown());
   checkForUpdate();
+  if ('serviceWorker' in navigator && syncShown()) { try { navigator.serviceWorker.register('sw.js').catch(function () { /* works without it */ }); } catch (e) { /* ignore */ } }
   setInterval(render, 5000);
   setInterval(pipLoad, 15000);
   setInterval(function () { syncSoon(0); }, 60000);
-  setInterval(function () { if (pip.fast) { renderPip(new Date()); homePipRender(new Date()); } if (Feed.on) Feed.paint(); if (Log.on) Log.tick(); }, 1000);
+  setInterval(function () { if (pip.fast) { renderPip(new Date()); homePipRender(new Date()); } if (Feed.on) Feed.paint(); if (Log.on) Log.tick(); Baby.tick(); }, 1000);
   setInterval(loadWeather, 15 * 60000);
   setInterval(loadAir, 30 * 60000);
   if (podMode) setInterval(readPod, 30000);

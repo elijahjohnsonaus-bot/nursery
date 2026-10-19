@@ -1,0 +1,16 @@
+{
+  "name": "Nursery",
+  "short_name": "Nursery",
+  "description": "The nursery screen, the family calendar and photos, and the baby tracker (feeds, nappies and sleep), shared between every screen and phone.",
+  "start_url": "./#baby",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#E6E8EA",
+  "theme_color": "#E6E8EA",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

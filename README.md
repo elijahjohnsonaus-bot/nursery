@@ -1,6 +1,6 @@
 # Nursery screen
 
-An always-on screen for the nursery, built for an Amazon Echo Show 8 running LineageOS and Fully Kiosk Browser. It is one web page (`index.html`), a photo upload page (`photos.html`) and a few small Netlify functions that let your devices share settings, the family calendar and the photos.
+An always-on screen for the nursery, built for an Amazon Echo Show 8 running LineageOS and Fully Kiosk Browser. It is one web page (`index.html`), a photo upload page (`photos.html`) and a few small Netlify functions that let your devices share settings, the baby's entries, the family calendar and the photos. The same page works on a phone, where it is the baby tracker.
 
 ## What it shows
 
@@ -8,20 +8,22 @@ An always-on screen for the nursery, built for an Amazon Echo Show 8 running Lin
 - Sun, rain, air quality and tonight's temperatures.
 - A night look (dim amber) that switches on and off by itself.
 - Night light and sounds (white, pink and brown noise, shushing, waves, heartbeat) with timers.
-- Pip: the last feed, the next side, nappies and sleep from the Pip baby tracker, and a night feed screen for 3 am.
-- Logging to Pip from the screen (see below).
+- The baby tracker (the Pip app, now built in): feeds with a timer per side, bottles, nappies, sleep, pumping, medicine, growth and notes, with a day-by-day list, trends and a summary to read out at appointments (see The Baby page).
+- The last feed, the next side, nappies and sleep on the nursery screen, and a night feed screen for 3 am.
+- Logging from the screen (see Logging).
 - The same settings on the Echo, a laptop and a phone (see Shared settings).
 - Home: the family calendar, the photos, the weather and the baby at a glance, with the nursery screen one swipe away (see Pages).
 - Family: the next two weeks of everyone's calendars, one colour per person, and a photo frame slideshow that starts by itself when the screen is left alone (see below).
 
 ## Pages
 
-The screen opens on **Home**: the clock and date, the weather now and for the day, what is coming up on the family calendar, a shuffled slideshow of the family photos, and the baby at a glance. **Swipe left** for the nursery screen (the temperature, TOG bag and layers, the baby band and tonight's temperatures). Swipe right to come back. The dots at the bottom show which page you are on and can be tapped, and on a laptop the arrow keys work too.
+The screen has three pages. It opens on **Home**: the clock and date, the weather now and for the day, what is coming up on the family calendar, a shuffled slideshow of the family photos, and the baby at a glance. **Swipe left once** for the nursery screen (the temperature, TOG bag and layers, the baby band and tonight's temperatures). **Swipe left again** for the **Baby** page, the full tracker. Swipe right to go back. The dots at the bottom show which page you are on and can be tapped, and on a laptop the arrow keys work too.
 
-- The night look always opens on the nursery screen, and the day look moves back to Home when it starts.
-- In the day look, the nursery screen goes back to Home after 2 minutes without a touch.
+- The night look opens on the nursery screen, and the day look moves back to Home when it starts. If someone is in the middle of using the screen when the look changes, the page is left where it is.
+- In the day look, the nursery and Baby pages go back to Home after 2 minutes without a touch (not while a Baby sheet is open, and not on a phone held upright).
+- The photo frame never starts over the Baby page.
 - Tap the photo on Home to see it full screen, the baby strip to log, or anywhere else for the buttons.
-- `/#home` and `/#nursery` open a particular page.
+- `/#home`, `/#nursery` and `/#baby` open a particular page. On a phone `/#baby` is the one to add to the home screen.
 - Home only shows the calendar and photos when the site's sharing is working (see Shared settings), and says what is missing when it is not.
 
 ## Putting it online
@@ -34,7 +36,7 @@ In Fully Kiosk, set the start URL to the Netlify address.
 
 Every device that opens the address uses the same settings, so there is nothing to set up on each one. Type the Pip address on a laptop and the Echo already has it. The same goes for the location, night times, room adjustment and TOG bags.
 
-What is shared: the Pip address and birthday, the location, night start and end times, the room adjustment, which TOG bags are listed and how long until the photo frame starts. What stays on each device: sounds, night light, "Logged as", the automatic night feed screen and the Pip passcode (see below).
+What is shared: the baby's name and birthday, the nappy targets and whether the 24 hour guide shows, which app the entries live in (see Moving over from Pip), the old Pip's address, the location, night start and end times, the room adjustment, which TOG bags are listed and how long until the photo frame starts. What stays on each device: sounds, night light, "Logged as" (so each phone shows its own name), the automatic night feed screen and the old Pip's passcode (see below).
 
 How it behaves:
 
@@ -42,14 +44,14 @@ How it behaves:
 - A change on one device reaches the others within a minute, or straight away when a screen is opened.
 - Each setting is saved on its own, so changing the night times on one device and the location on another keeps both. If two devices change the same setting, the later save wins.
 - If the server is unreachable, each device keeps working with its own settings and catches up later.
-- Disconnecting Pip on one device disconnects it on every device.
+- Disconnecting the old Pip on one device disconnects it on every device.
 - Settings are kept in a private Netlify Blobs store, never in this repo.
 
-The site is open, like Pip: anyone who has the address can use it. Keep the address to yourselves. That also applies to the family calendar and photos below. While the site is open the Pip passcode is not stored on the server, so if Pip has a passcode, type it once on each device.
+The site is open, like Pip was: anyone who has the address can use it, and that includes reading and adding the baby's entries. Keep the address to yourselves. That also applies to the family calendar and photos below. While the site is open the old Pip's passcode is not stored on the server, so if the old Pip has a passcode, type it once on each device.
 
 ### Locking it (optional)
 
-To require a passcode, add `NURSERY_PASSCODE` in Netlify (Site configuration, Environment variables) and redeploy the site. Every device then needs that passcode once, which also shares the Pip passcode. Either open this link once on each device (the part after `#` is never sent to a server, and is removed from the address once saved):
+To require a passcode, add `NURSERY_PASSCODE` in Netlify (Site configuration, Environment variables) and redeploy the site. Every device then needs that passcode once, which also shares the old Pip's passcode. The baby's entries are locked as well. Either open this link once on each device (the part after `#` is never sent to a server, and is removed from the address once saved):
 
 `https://YOUR-NURSERY-SITE/#key=YOUR-NURSERY-PASSCODE`
 
@@ -86,22 +88,47 @@ On the Echo, Family, then Photo frame starts a full screen slideshow (20 seconds
 
 The frame also starts by itself once nobody has touched the screen for 5 minutes. Settings, Photo frame changes that to 2, 10 or 30 minutes, or never, and the choice is shared by every screen. It only comes on in the day look, never while a sound is playing, the night light or a screen is open, and it waits the full time again after any touch. Each lap through the photos is shuffled again, and a lap never starts with the photo that has just been shown. If there are no photos it quietly does nothing and tries again after the same wait. Photos are stored in a private Netlify Blobs store, never in this repo. While the site is open, anyone who has the site's address can see, add and delete photos, so lock it if you want them private.
 
-## Connecting Pip
+## The Baby page
 
-This repo is public, so Pip's address and passcode are **not** kept in it. Enter them on the Echo:
+This is Pip, built into the nursery app. Swipe to it on the Echo, or open `/#baby` on a phone. It has four tabs:
 
-- Settings, Pip: type the address and passcode, optionally the birthday (for the age), then Connect.
-- Or open this link once on the Echo (the part after `#` is never sent to a server, and is removed from the address once saved):
+- **Today**: the time since the last feed, which side was last used and which to offer next, big buttons for Breast, Bottle, Pump, Nappy, Sleep and More (medicine, growth, a note, or an entry for a time that has passed), the last 24 hours at a glance with the nappy guide, and today's list. Tap any entry to change or delete it.
+- **Days**: any day, one at a time, with its totals.
+- **Trends**: the average gap between feeds, the longest sleep, feeds and sleep a day for the last week, the weight line, and a summary to read out at an appointment.
+- **Settings**: who is logging on this device, the baby's name and birthday, the nappy targets, moving over from Pip, and your data (sync now, download a backup, download a spreadsheet, reload this device's copy).
 
-  `https://YOUR-NURSERY-SITE/#pip=YOUR-PIP-ADDRESS&pass=YOUR-PASSCODE&dob=YYYY-MM-DD`
+Notes:
 
-  The `#key=` and `#pip=` parts can be combined with `&`.
+- Breast feeds run a timer for each side and switching banks the time. Only one feed runs at a time. Starting a feed picks the side to offer next.
+- A time field left alone means "now" at the moment you save. Change it to log something that has already happened.
+- The nappy guide is general (about one wet nappy per day of age for the first six days, then six wet and two dirty a day). It is a guide, not advice about your baby: check it with your midwife or child and family health nurse.
+- Every entry shows who logged it. Each phone sets its own name once (a banner asks the first time).
+- Entries are saved on the device first and sent to the server straight away. With no signal they wait on the device and are sent, once each, when it is back, so a flat spot in the Wi-Fi or a lift loses nothing.
+- Everything shown on the Echo and on every phone is the same list, and a change on one appears on the others within about 15 seconds (straight away when a screen is opened).
 
-You only do this on one device, and the others pick it up. Pip's own passcode (`APP_PASSCODE` on Pip's Netlify site) is optional. Pip's code is public too, so without one anyone with Pip's address can read, and now write, the entries. If Pip has a passcode, type it once on each device (it is only shared if the nursery site is locked).
+### On a phone
 
-## Logging to Pip
+Open `https://YOUR-NURSERY-SITE/#baby` and add it to the home screen (Share, Add to Home Screen on an iPhone; the menu, Install app or Add to Home screen on Android). It then opens full screen and, because of a small service worker (`sw.js`), still opens with no signal and shows what was last synced. The service worker fetches the page from the network first, so a new version on GitHub still lands straight away, and it never stores anything from `/api/`.
 
-Tap the Pip strip on the main screen, or the Log button, to open the Log screen:
+## Moving over from Pip
+
+The old Pip app keeps running and is never changed by any of this. The new app keeps the entries in its own store (`baby-entries` in Netlify Blobs), using the same entry format, so they come across as they are, with the same ids, times, sides and who logged them.
+
+1. Deploy this version (push to `main`). It adds one function, `netlify/functions/sync.js`, which Netlify picks up by itself.
+2. On any device open the Baby page, then Settings, and type the old Pip's address (the one your phones use). If the old Pip has a passcode, type it in Menu, Settings, Pip (the old app) first.
+3. Press **Bring Pip's data over**. It reads every entry from the old Pip, copies them here in batches, then reads them back and checks that each one arrived, and says how many. It only reads the old Pip. It is safe to press as many times as you like: an entry that is already here is not duplicated, and if an entry was changed in the old Pip since, the newer version wins.
+4. Look through Today, Days and Trends and check it matches what you expect.
+5. Press **Use this app from now on** (it asks you to tap twice). From then on every screen and phone reads and writes the entries here instead of the old Pip. It is shared, so you only do it once.
+6. Open `/#baby` on each phone, add it to the home screen, and set the name on each.
+7. If anyone logged something in the old Pip after step 3, press **Bring Pip's data over** again to catch up. **Go back to the old Pip** reverses step 5 the same way.
+
+Keep the old Pip running until you are sure everything is here, and download a backup first (Settings, Download a backup).
+
+The old address and passcode are kept out of this repo, like everything else private: they are saved in the app's settings, never in the code.
+
+## Logging
+
+Tap the baby strip on Home or the nursery screen, or the Log button, to open the Log screen (or use the Baby page above):
 
 - **Left / Right**: start a feed (the suggested side is marked Next). While a feed runs, the other side switches, and Stop feed saves it.
 - **Bottle**: amount, expressed or formula, and when (now or up to an hour ago).
@@ -112,7 +139,18 @@ Tap the Pip strip on the main screen, or the Log button, to open the Log screen:
 
 On the night feed screen the same feed, nappy, bottle and sleep buttons are under the timer, in dim red.
 
-Entries are written the same way the phones write them, so they appear in Pip with the name set in Settings (default "Nursery screen"). If the Wi-Fi drops, entries wait on the Echo and are sent when Pip is reachable again. Before changing a feed that is already running, the Echo checks Pip first, so a change made on a phone a moment ago is not overwritten. Logging can be switched off in Settings.
+The Echo logs under the name set in Settings (default "Nursery screen"). Before changing a feed that is already running, the screen checks the server first, so a change made on a phone a moment ago is not overwritten. Logging can be switched off in Settings.
+
+## The old Pip app
+
+Until you switch (above), the screen reads from and logs to the old Pip app exactly as before. This repo is public, so the old Pip's address and passcode are **not** kept in it. Enter them on one device and the others pick up the address:
+
+- Settings, Pip (the old app): type the address and passcode, then Connect.
+- Or open this link once (the part after `#` is never sent to a server, and is removed from the address once saved):
+
+  `https://YOUR-NURSERY-SITE/#pip=YOUR-PIP-ADDRESS&pass=YOUR-PASSCODE&dob=YYYY-MM-DD`
+
+  The `#key=` and `#pip=` parts can be combined with `&`.
 
 ## Hardware test
 
@@ -130,5 +168,7 @@ Planned: a small sensor board in the room posts the real temperature, and the sc
 - `netlify/functions/settings.js`: the shared settings function (`/api/settings`).
 - `netlify/functions/calendar.js`: reads the calendar links and returns the next two weeks (`/api/calendar`).
 - `netlify/functions/photos.js`: stores and serves the photos (`/api/photos`).
+- `netlify/functions/sync.js`: stores the baby's entries and shares them between devices (`/api/sync`). The same protocol the Pip app used.
+- `manifest.json`, `sw.js`, `icon-*.png`: let a phone add the app to its home screen and open it with no signal.
 - `netlify/lib/auth.js`, `netlify/lib/ical.js`: the passcode check, and the calendar file reader.
 - `netlify.toml`, `package.json`: Netlify settings and the functions' one dependency.

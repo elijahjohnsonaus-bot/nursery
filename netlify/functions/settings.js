@@ -32,6 +32,13 @@ export const RULES = {
   'pip.host': (v) => isStr(v, 200),
   'pip.pass': (v) => isStr(v, 200),
   'pip.dob': (v) => v === '' || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)),
+  // Where the baby's entries live: this site ('here') or the old Pip app ('old'). Left unset it follows
+  // whether an old Pip address has been typed in.
+  'pip.src': (v) => v === 'old' || v === 'here',
+  'pip.baby': (v) => isStr(v, 40),
+  'pip.wet': (v) => Number.isInteger(v) && v >= 0 && v <= 20,
+  'pip.dirty': (v) => Number.isInteger(v) && v >= 0 && v <= 20,
+  'pip.guide': (v) => typeof v === 'boolean',
 };
 
 const blobKey = (k) => 'k/' + k;
