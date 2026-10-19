@@ -18,7 +18,8 @@ const isStr = (v, max) => typeof v === 'string' && v.length <= max;
 const isNum = (v, lim) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= lim;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const BAGS = ['0.2', '1.0', '2.5', '3.5'];
-const FRAME_IDLE = [0, 2, 5, 10, 30];   // minutes before the photo frame starts by itself, 0 for never
+const FRAME_IDLE = [0, 2, 5, 10, 30];   // no longer used by the app (the full-screen frame is manual now); kept so an older cached page can still save
+const SLIDE_SECS = [5, 10, 20, 30, 60];   // seconds each photo stays up in the slideshow
 
 // What can be shared, and what each value has to look like.
 export const RULES = {
@@ -27,6 +28,7 @@ export const RULES = {
   nightTo: (v) => typeof v === 'string' && HHMM.test(v),
   offset: (v) => isNum(v, 40),
   frameIdle: (v) => FRAME_IDLE.includes(v),
+  slideSecs: (v) => SLIDE_SECS.includes(v),
   bags: (v) => !!v && typeof v === 'object' && !Array.isArray(v) &&
     Object.keys(v).every((k) => BAGS.includes(k) && typeof v[k] === 'boolean') && Object.values(v).some(Boolean),
   'pip.host': (v) => isStr(v, 200),

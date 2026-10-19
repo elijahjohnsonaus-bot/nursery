@@ -13,7 +13,7 @@ An always-on screen for the nursery, built for an Amazon Echo Show 8 running Lin
 - Logging from the screen (see Logging).
 - The same settings on the Echo, a laptop and a phone (see Shared settings).
 - Home: the family calendar, the photos, the weather and the baby at a glance, with the nursery screen one swipe away (see Pages).
-- Family: the next two weeks of everyone's calendars, one colour per person, and a photo frame slideshow that starts by itself when the screen is left alone (see below).
+- Family: the next two weeks of everyone's calendars, one colour per person, and a full screen photo frame you start by tapping the Home photo (see below).
 
 ## Pages
 
@@ -21,7 +21,7 @@ The screen has three pages. It opens on **Home**: the clock and date, the weathe
 
 - The night look opens on the nursery screen, and the day look moves back to Home when it starts. If someone is in the middle of using the screen when the look changes, the page is left where it is.
 - In the day look, the nursery and Baby pages go back to Home after 2 minutes without a touch (not while a Baby sheet is open, and not on a phone held upright).
-- The photo frame never starts over the Baby page.
+- The photo slideshow runs in its corner of Home all day in the day look, and full screen only starts when you tap it.
 - Tap the photo on Home to see it full screen, the baby strip to log, or anywhere else for the buttons.
 - `/#home`, `/#nursery` and `/#baby` open a particular page. On a phone `/#baby` is the one to add to the home screen.
 - Home only shows the calendar and photos when the site's sharing is working (see Shared settings), and says what is missing when it is not.
@@ -36,7 +36,7 @@ In Fully Kiosk, set the start URL to the Netlify address.
 
 Every device that opens the address uses the same settings, so there is nothing to set up on each one. Type the Pip address on a laptop and the Echo already has it. The same goes for the location, night times, room adjustment and TOG bags.
 
-What is shared: the baby's name and birthday, the nappy targets and whether the 24 hour guide shows, which app the entries live in (see Moving over from Pip), the old Pip's address, the location, night start and end times, the room adjustment, which TOG bags are listed and how long until the photo frame starts. What stays on each device: sounds, night light, "Logged as" (so each phone shows its own name), the automatic night feed screen and the old Pip's passcode (see below).
+What is shared: the baby's name and birthday, the nappy targets and whether the 24 hour guide shows, which app the entries live in (see Moving over from Pip), the old Pip's address, the location, night start and end times, the room adjustment, which TOG bags are listed and how often the slideshow changes photo. What stays on each device: sounds, night light, "Logged as" (so each phone shows its own name), the automatic night feed screen and the old Pip's passcode (see below).
 
 How it behaves:
 
@@ -82,11 +82,13 @@ Anyone with that link can read that calendar, so share only calendars you are ha
 
 ### Photos
 
-Open `https://YOUR-NURSERY-SITE/photos.html` on a phone or laptop. (If the site is locked, use `photos.html#key=YOUR-NURSERY-PASSCODE` or sign in with the passcode.) Choose photos and they are shrunk, saved as plain JPEGs without the camera and location details, and added. Tap Delete twice to remove one. Up to 300 photos are kept.
+Add and remove photos in the app itself: Settings, then **Photos** (on the Echo tap the screen, then Settings; on a phone use Menu on the Baby page, then Settings). Tap **Add photos**, choose as many as you like, and each is shrunk, saved as a plain JPEG without the camera and location details, and added. Tap the little x on a photo twice to delete it. Up to 300 photos are kept. The old upload page at `/photos.html` still works and uses the same photos (if the site is locked, use `photos.html#key=YOUR-NURSERY-PASSCODE`).
 
-On the Echo, Family, then Photo frame starts a full screen slideshow (20 seconds each, with a blurred backdrop so nothing is cropped). Tap anywhere to close it. It closes by itself when the night look starts.
+The photos show as a shuffled slideshow in the corner of the Home page, all day in the day look, so the time, weather and calendar stay on screen. Under Photos, **Changes every** sets how long each photo stays up: 5, 10, 20 or 30 seconds, or 1 minute. It applies to the Home slideshow and to full screen, and every screen shares it. Each lap through the photos is shuffled again, and a lap never starts with the photo that has just been shown. With no photos, Home says so and points here.
 
-The frame also starts by itself once nobody has touched the screen for 5 minutes. Settings, Photo frame changes that to 2, 10 or 30 minutes, or never, and the choice is shared by every screen. It only comes on in the day look, never while a sound is playing, the night light or a screen is open, and it waits the full time again after any touch. Each lap through the photos is shuffled again, and a lap never starts with the photo that has just been shown. If there are no photos it quietly does nothing and tries again after the same wait. Photos are stored in a private Netlify Blobs store, never in this repo. While the site is open, anyone who has the site's address can see, add and delete photos, so lock it if you want them private.
+Full screen is only ever started by you: tap the photo on Home, or use Family, then Photo frame (a blurred backdrop so nothing is cropped). Tap anywhere to close it. It also closes by itself when the night look starts. Nothing starts it automatically.
+
+Photos are stored in a private Netlify Blobs store, never in this repo. While the site is open, anyone who has the site's address can see, add and delete photos, so lock it if you want them private.
 
 ## The Baby page
 
@@ -163,7 +165,7 @@ Planned: a small sensor board in the room posts the real temperature, and the sc
 ## Files
 
 - `index.html`: the whole app.
-- `photos.html`: the photo upload page.
+- `photos.html`: the older photo upload page (the same thing is now in Settings, Photos).
 - `test.html`: the hardware test page.
 - `netlify/functions/settings.js`: the shared settings function (`/api/settings`).
 - `netlify/functions/calendar.js`: reads the calendar links and returns the next two weeks (`/api/calendar`).

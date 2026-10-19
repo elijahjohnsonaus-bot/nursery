@@ -50,10 +50,10 @@
   left for the nursery screen (temperature and sleeping bag). The night look always opens on the nursery
   screen, and the day look comes back to Home when the screen has been left alone for a couple of minutes.
   Family (needs shared settings, so the screen has the nursery passcode): the next two weeks of the
-  family's calendars, one colour per person, and a photo frame slideshow that starts by itself after the
-  screen has been left alone (Settings, Photo frame). The calendar links live
-  in the CALENDAR_FEEDS variable in Netlify (see netlify/functions/calendar.js). Photos are added from
-  /photos.html and kept in a private Netlify Blobs store.
+  family's calendars, one colour per person. The Home page runs a photo slideshow in its corner all day, and a
+  tap on it (or Family, Photo frame) makes it full screen. The calendar links live
+  in the CALENDAR_FEEDS variable in Netlify (see netlify/functions/calendar.js). Photos are added in
+  Settings, Photos (or at /photos.html) and kept in a private Netlify Blobs store.
   /test.html checks the Echo's speaker, microphone, camera and screen.
 -->
 <style>
@@ -202,6 +202,18 @@ body.night .overlay{color:var(--amber)}
 .panel-head h2{font-size:5.6vmin; font-weight:600}
 .panel h3{font-size:3.4vmin; font-weight:600; margin-bottom:1.4vmin}
 .set{margin-bottom:4.4vmin}
+label.btn{display:inline-flex; align-items:center; justify-content:center; cursor:pointer}
+#photoCount{margin-left:2.4vmin; font-size:2.9vmin}
+#photoMsg.bad{color:#B5412D}
+body.night #photoMsg.bad{color:#C8402A}
+.pgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(17vmin,1fr)); gap:1.4vmin}
+.pfig{position:relative; margin:0; border:.2vmin solid var(--line); border-radius:1.6vmin; overflow:hidden; background:var(--panel)}
+.pfig::before{content:""; display:block; padding-top:100%}
+.pfig img{position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; display:block}
+.pfig button{position:absolute; top:.8vmin; right:.8vmin; min-width:7vmin; min-height:7vmin; padding:0 1.4vmin; border:0; border-radius:3.5vmin; background:rgba(0,0,0,.62); color:#fff; font-size:2.8vmin; font-weight:600}
+.pfig button.ask{background:#B5412D}
+.pfig.wait::after{content:""; position:absolute; top:0; right:0; bottom:0; left:0; background:var(--paper); opacity:.6}
+.pempty{font-size:2.9vmin; color:var(--ink-soft)}
 .row{display:flex; flex-wrap:wrap; align-items:center; margin-bottom:1.6vmin}
 .row.end{justify-content:space-between}
 .lbl{font-size:2.9vmin; color:var(--ink-soft); min-width:17vmin; margin:0 2vmin 1.2vmin 0}
@@ -443,6 +455,7 @@ body.night .dots .dot.on{opacity:.45}
   .controls{flex-wrap:wrap} .controls .btn{margin:1vmin; min-width:40vmin; font-size:4.4vmin}
   .btn{font-size:4.4vmin} .chip{font-size:4vmin} .lbl{font-size:4vmin} .hint{font-size:3.8vmin}
   .panel-head h2{font-size:7.5vmin} .panel h3{font-size:4.8vmin}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(22vmin,1fr))} .pfig button{min-width:11vmin; min-height:11vmin; font-size:4.2vmin} #photoCount{font-size:3.8vmin} .pempty{font-size:3.8vmin}
   .sound{width:calc(50% - 1.6vmin)} .sound b{font-size:4.6vmin} .sound span{font-size:3.6vmin}
   input[type=text], input[type=password]{width:100%; margin-bottom:2vmin} input[type=range]{width:100%}
   body.has-pip .stage{grid-template-rows:auto; grid-template-areas:"top" "reading" "outfit" "pip" "strip" "tip"}
@@ -888,16 +901,20 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       <div class="row"><span class="lbl">From</span><input type="time" id="nightFrom" aria-label="Night look starts"><span class="lbl">until</span><input type="time" id="nightTo" aria-label="Night look ends"></div>
     </div>
 
-    <div class="set">
-      <h3>Photo frame</h3>
-      <div class="row" id="frameChips">
-        <button class="chip" data-frame-idle="2">After 2 min</button>
-        <button class="chip" data-frame-idle="5">After 5 min</button>
-        <button class="chip" data-frame-idle="10">After 10 min</button>
-        <button class="chip" data-frame-idle="30">After 30 min</button>
-        <button class="chip" data-frame-idle="0">Never</button>
+    <div class="set" id="photoSet">
+      <h3>Photos</h3>
+      <p class="hint">The photos for the Home slideshow, which keeps going in its corner all day so the time, weather and calendar stay on screen. Tap it for full screen, or use Family, Photo frame. Every photo is shrunk before it is saved, and its location and camera details are dropped.</p>
+      <div class="row"><span class="lbl">Changes every</span></div>
+      <div class="row" id="slideChips">
+        <button class="chip" data-slide="5">5 sec</button>
+        <button class="chip" data-slide="10">10 sec</button>
+        <button class="chip" data-slide="20">20 sec</button>
+        <button class="chip" data-slide="30">30 sec</button>
+        <button class="chip" data-slide="60">1 min</button>
       </div>
-      <p class="hint">The photos shuffle on their own once nobody has touched the screen for this long. Only in the day look, and not while a sound, the night light or a screen is open. Touch the screen to go back. Add photos on the <a href="photos.html">photos page</a>. This is the same on every screen.</p>
+      <div class="row"><label class="btn primary" for="photoPick">Add photos</label><input type="file" id="photoPick" accept="image/*" multiple hidden><span class="muted" id="photoCount"></span></div>
+      <p class="hint" id="photoMsg" role="status"></p>
+      <div class="pgrid" id="photoGrid"></div>
     </div>
 
     <div class="set" id="testSet">
@@ -914,7 +931,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 (function () {
   'use strict';
 
-  var VERSION = '20 Oct 2026, v8';
+  var VERSION = '20 Oct 2026, v9';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -955,11 +972,11 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   var DEFAULTS = {
     place: { name: 'Oak Flats, New South Wales', lat: -34.56, lon: 150.82 },
     nightFrom: '18:30', nightTo: '06:30',
+    slideSecs: 20,   // seconds each photo stays up in the Home slideshow and the full-screen frame
     offset: 0,
     bags: { '0.2': true, '1.0': true, '2.5': true, '3.5': true },
     sound: { type: 'brown', volume: 30, timer: '60' },
     light: { colour: 'amber', level: 45, off: '30' },
-    frameIdle: 5,   // minutes of no touching before the photo frame starts by itself (0 for never)
     pip: { host: '', pass: '', dob: '', auto: false, log: true, by: 'Nursery screen', src: '', baby: '', wet: 6, dirty: 2, guide: true }
   };
   function withDefaults(s) {
@@ -1493,7 +1510,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     node.classList.add('open');
     if (node === el.sounds) syncSounds();
     if (node === el.family) familyOpen();
-    if (node === el.settings) { pip.dirty = false; sync.dirty = false; syncSettings(); syncSoon(0); }
+    if (node === el.settings) { pip.dirty = false; sync.dirty = false; syncSettings(); syncSoon(0); phRefresh(); }
   }
   function closePanel() {
     if (openOverlay) openOverlay.classList.remove('open');
@@ -1709,8 +1726,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     el.nightFrom.value = settings.nightFrom; el.nightTo.value = settings.nightTo;
     var chips = el.settings.querySelectorAll('[data-bag]');
     for (var i = 0; i < chips.length; i++) chips[i].classList.toggle('on', !!settings.bags[chips[i].getAttribute('data-bag')]);
-    var fchips = el.settings.querySelectorAll('[data-frame-idle]');
-    for (var f = 0; f < fchips.length; f++) fchips[f].classList.toggle('on', +fchips[f].getAttribute('data-frame-idle') === frameMinutes());
+    var schips = el.settings.querySelectorAll('[data-slide]');
+    for (var q = 0; q < schips.length; q++) schips[q].classList.toggle('on', +schips[q].getAttribute('data-slide') * 1000 === slideMs());
     var out = outsideTemp();
     if (roomDraft === null && out !== null) roomDraft = Math.round((out + (settings.offset || 0)) * 2) / 2;
     setText(el.roomVal, roomDraft === null ? '--' : roomDraft.toFixed(1) + '°');
@@ -1730,8 +1747,11 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     else if (b.id === 'roomUp' && roomDraft !== null) roomDraft = Math.min(45, roomDraft + 0.5);
     else if (b.id === 'roomSave' && roomDraft !== null && out !== null) { settings.offset = Math.round((roomDraft - out) * 10) / 10; state = null; }
     else if (b.id === 'roomClear') { settings.offset = 0; roomDraft = null; state = null; }
-    else if (b.hasAttribute('data-frame-idle')) { settings.frameIdle = +b.getAttribute('data-frame-idle'); }
-    else if (b.hasAttribute('data-bag')) {
+    else if (b.hasAttribute('data-slide')) {
+      settings.slideSecs = +b.getAttribute('data-slide');
+      if (Tile.on) Tile.next();     // the new pace starts now, not after the photo already showing
+      if (Frame.on) Frame.next();
+    } else if (b.hasAttribute('data-bag')) {
       var k = b.getAttribute('data-bag'), count = 0;
       for (var x in settings.bags) if (settings.bags[x]) count++;
       if (!(settings.bags[k] && count === 1)) settings.bags[k] = !settings.bags[k];
@@ -2539,17 +2559,17 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   // night light and the "Logged as" name stay on each device. Each setting carries the time the server
   // last saw it change, so two devices changing different settings never overwrite each other. While the
   // site is open the Pip passcode is not stored on the server (a locked site shares it too).
-  var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'frameIdle', 'pip.host', 'pip.pass', 'pip.dob', 'pip.src', 'pip.baby', 'pip.wet', 'pip.dirty', 'pip.guide'];
+  var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'slideSecs', 'pip.host', 'pip.pass', 'pip.dob', 'pip.src', 'pip.baby', 'pip.wet', 'pip.dirty', 'pip.guide'];
   var HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
   var BAG_KEYS = ['0.2', '1.0', '2.5', '3.5'];
   function okStr(v, n) { return typeof v === 'string' && v.length <= n; }
   function okNum(v, n) { return typeof v === 'number' && isFinite(v) && Math.abs(v) <= n; }
   var SYNC_OK = {
+    slideSecs: function (v) { return [5, 10, 20, 30, 60].indexOf(v) >= 0; },
     place: function (v) { return !!v && typeof v === 'object' && okStr(v.name, 120) && okNum(v.lat, 90) && okNum(v.lon, 180); },
     nightFrom: function (v) { return typeof v === 'string' && HHMM.test(v); },
     nightTo: function (v) { return typeof v === 'string' && HHMM.test(v); },
     offset: function (v) { return okNum(v, 40); },
-    frameIdle: function (v) { return [0, 2, 5, 10, 30].indexOf(v) >= 0; },
     bags: function (v) {
       if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
       var any = false;
@@ -2713,7 +2733,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   // Both come from small Netlify functions. They need nothing on the device unless the site is locked with
   // NURSERY_PASSCODE, in which case they use the passcode this device already has for shared settings.
   // The calendar is the family's Apple Calendar shared links, one colour per person, set in Netlify
-  // (CALENDAR_FEEDS). The photo frame shows what was added at /photos.html.
+  // (CALENDAR_FEEDS). The slideshow shows what was added in Settings, Photos.
   var Cal = (function () {
     var c = load('nursery.cal');
     return { data: c && c.data && c.data.events ? c.data : null, at: c && +c.at || 0, status: 'idle', code: 0, busy: false, inflight: null };
@@ -2885,19 +2905,13 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   var frameTouch = { at: Date.now(), n: 0 };
   function frameTouched() { if (frameTouch) { frameTouch.at = Date.now(); frameTouch.n++; } }
   ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'click'].forEach(function (t) { document.addEventListener(t, frameTouched, true); });
-  var FRAME_WAITS = [0, 2, 5, 10, 30];
-  function frameMinutes() { return FRAME_WAITS.indexOf(settings.frameIdle) >= 0 ? settings.frameIdle : DEFAULTS.frameIdle; }
-  // True while something else has the screen, so the frame must not come on by itself.
-  function frameBlocked() {
-    return Frame.on || lastMode !== 'day' || document.visibilityState === 'hidden' || !!openOverlay ||
-      Sound.playing || Light.on || Feed.on || Log.on || el.controls.classList.contains('show') ||
-      Baby.sheet || Pager.at === 2 || window.innerHeight > window.innerWidth;   // not over the tracker, and not on a phone held upright
-  }
   // The shuffled slideshow itself. The photo frame and the Home page each run one.
   // root holds two .slide elements (each a blurred .bg and an img) that fade into each other.
-  function Slides(root, gap) {
+  var SLIDE_SECS = [5, 10, 20, 30, 60];
+  function slideMs() { return (SLIDE_SECS.indexOf(settings.slideSecs) >= 0 ? settings.slideSecs : DEFAULTS.slideSecs) * 1000; }
+  function Slides(root) {
     var sl = root.querySelectorAll('.slide');
-    this.root = root; this.gap = gap || 20000;
+    this.root = root;
     this.slide = { A: sl[0], B: sl[1] }; this.noteEl = root.querySelector('.frame-note');
     this.on = false; this.known = []; this.ids = []; this.i = 0; this.last = ''; this.timer = null; this.front = 'A'; this.urls = {}; this.run = 0;
     this.onEmpty = null; this.tag = '';   // tag marks which slideshow is asking, in the address
@@ -2937,10 +2951,11 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (self.i >= self.ids.length) self.list().catch(function () { /* the next lap uses what it already has */ });
     function later(ms) { self.timer = setTimeout(function () { self.next(); }, ms); }
     fetch('/api/photos?' + (self.tag ? self.tag + '&' : '') + 'id=' + encodeURIComponent(id), { headers: famAuth() || {} }).then(function (r) {
+      if (r.status === 404 && self.on && run === self.run) { later(300); return null; }   // deleted since the list was made
       if (!r.ok) throw new Error('http');
       return r.blob();
     }).then(function (b) {
-      if (!self.on || run !== self.run) return;
+      if (!b || !self.on || run !== self.run) return;
       var url = URL.createObjectURL(b), slide = self.slide[back], img = slide.getElementsByTagName('img')[0];
       img.onload = function () {
         if (!self.on || run !== self.run) { URL.revokeObjectURL(url); return; }
@@ -2951,7 +2966,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
         if (old) setTimeout(function () { URL.revokeObjectURL(old); }, 2500);
         self.urls[back] = url; self.front = back;
         self.note('');
-        later(self.gap);
+        later(slideMs());
       };
       img.onerror = function () { URL.revokeObjectURL(url); if (self.on && run === self.run) later(5000); };
       img.src = url;
@@ -2975,39 +2990,36 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   };
 
   // The full screen photo frame.
-  var Frame = new Slides(el.frame, 20000);
+  var Frame = new Slides(el.frame);
   Frame.failText = 'Can’t load the photos. Tap to go back.';
-  Frame.auto = false; Frame.loading = false;
+  Frame.loading = false;
   Frame.onEmpty = function () { Frame.finish(); };     // every photo was deleted while it was showing
   Frame.finish = function () {
-    el.frame.classList.remove('on'); Frame.auto = false;
-    frameTouched();   // however it closed, the screen then gets its full wait before the frame comes back
+    el.frame.classList.remove('on');
+    frameTouched();
     render();
     tileCheck();
   };
   Frame.close = function () { if (Frame.on) { Frame.stop(); Frame.finish(); } };
-  // auto is true when the screen has been left alone, so nothing is said if it can't start.
-  Frame.open = function (auto) {
+  // Full screen is only ever started by a tap: on the Home photo, or Family, Photo frame. The Home page keeps its
+  // own slideshow going all day in its corner, so the time, weather and calendar stay on screen.
+  Frame.open = function () {
     if (Frame.on) return;
-    if (!auto) famMsg('Loading photos…');
+    famMsg('Loading photos…');
     if (Frame.loading) return;
     Frame.loading = true;
-    var seq = frameTouch.n;
     famReady().then(function () {
-      if (!famAuth()) { if (!auto) famMsg(famNoText()); throw null; }
+      if (!famAuth()) { famMsg(famNoText()); throw null; }
       return Frame.list();
     }).then(function () {
-      if (!Frame.known.length) { if (!auto) famMsg('No photos yet. Add some from a phone or laptop at /photos.html.'); return; }
-      if (auto && (frameTouch.n !== seq || frameBlocked())) return;   // someone used the screen while the photos loaded
+      if (!Frame.known.length) { famMsg('No photos yet. Add some in Settings, Photos.'); return; }
       famMsg('');
       if (openOverlay) closePanel();
-      Frame.auto = !!auto;
-      if (auto) Pager.go(0, true);   // when it closes, the screen is back on Home
       el.frame.classList.add('on');
       Frame.start();
       tileCheck();
     }).catch(function (e) {
-      if (!e || auto) return;
+      if (!e) return;
       famMsg(e && e.status === 401 ? 'The nursery passcode doesn’t match the one in Netlify.' :
         e && e.status === 503 ? 'The server isn’t ready yet. Try again once the site has finished redeploying.' :
         e && e.status === 404 ? 'This site doesn’t have the photos function yet. Redeploy it from GitHub.' : 'Can’t load the photos. Check the connection.');
@@ -3015,19 +3027,167 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   };
   el.frame.addEventListener('click', function () { Frame.close(); });
   $('frameBtn').addEventListener('click', function () { Frame.open(); });
-  // Comes on by itself after the screen has been left alone. A try that finds nothing to show, or fails,
-  // is not repeated until the full wait has passed again.
-  function frameIdleCheck() {
-    var wait = frameMinutes() * 60000;
-    if (!wait || Frame.loading || frameBlocked() || Date.now() - frameTouch.at < wait) return;
-    if (!famAuth()) return;   // not sharing with the server yet, so there is nothing to ask for
-    frameTouched();
-    Frame.open(true);
-  }
-  setInterval(frameIdleCheck, 5000);
   setInterval(function () {
     if (openOverlay === el.family) { calRender(); if (Date.now() - Cal.at > 5 * 60000) calLoad(); }
   }, 30000);
+
+  // ---------- Photos, added and removed from Settings ----------
+  // What photos.html does, inside the app. Every photo is shrunk here and saved again as a JPEG, so what is stored is
+  // small and carries no location or camera details. The preview goes up first and the photo second, to /api/photos.
+  var Photos = { grid: $('photoGrid'), msg: $('photoMsg'), count: $('photoCount'), pick: $('photoPick'), thumbs: {}, queue: [], active: 0,
+    todo: [], total: 0, done: 0, failed: 0, last: '', adding: false };
+  function phSay(t, bad) { setText(Photos.msg, t || ''); Photos.msg.classList.toggle('bad', !!bad); }
+  function phErr(status, code, message) { var e = new Error(message || 'http'); e.status = status; e.code = code; return e; }
+  function phApi(query, opts) {
+    return famReady().then(function () {
+      var h = famAuth(), hh = {}, k;
+      if (!h) throw phErr(0, '', 'pass');
+      opts = opts || {};
+      for (k in h) hh[k] = h[k];
+      for (k in (opts.headers || {})) hh[k] = opts.headers[k];
+      opts.headers = hh; opts.cache = 'no-store';
+      return fetch('/api/photos' + query, opts);
+    });
+  }
+  function phOk(r) {
+    if (r.ok) return r;
+    return r.json().catch(function () { return {}; }).then(function (b) { throw phErr(r.status, b && b.error); });
+  }
+  function phWhy(e, name) {
+    var s = e && e.status, c = e && e.code;
+    if (e && e.message === 'pass') return famNoText();
+    if (c === 'full') return 'The gallery is full (300 photos). Delete some first.';
+    if (c === 'too-big') return (name || 'A photo') + ' is still too big after shrinking.';
+    if (s === 401) return 'The nursery passcode doesn’t match the one in Netlify.';
+    if (s === 503) return 'The server isn’t ready yet. Try again once the site has finished redeploying.';
+    if (s === 404) return 'This site doesn’t have the photos function yet. Redeploy it from GitHub.';
+    if (name) return name + ' could not be added.';
+    if (s) return 'Something went wrong (error ' + s + '). Try again.';
+    return 'Can’t reach the server. Check the connection and try again.';
+  }
+  function phCount() {
+    var n = Photos.grid.querySelectorAll('.pfig').length, e = Photos.grid.querySelector('.pempty');
+    setText(Photos.count, n ? n + (n === 1 ? ' photo' : ' photos') : '');
+    if (!n && !e) { var p = document.createElement('p'); p.className = 'pempty'; p.textContent = 'No photos yet. Tap Add photos.'; Photos.grid.appendChild(p); }
+    else if (n && e) e.parentNode.removeChild(e);
+  }
+  // The Home slideshow notices a change straight away rather than at the end of its lap.
+  function phChanged() {
+    Tile.retryAt = 0;
+    if (!Tile.on) { tileCheck(); return; }
+    Tile.list().then(function () { if (!Tile.known.length) { Tile.stop(); Tile.onEmpty(); } }, function () { /* the next lap tries again */ });
+  }
+  function phFigure(id, blob) {
+    var f = document.createElement('figure'); f.className = 'pfig'; f.setAttribute('data-id', id);
+    var img = document.createElement('img'); img.alt = '';
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = '×'; b.setAttribute('aria-label', 'Delete this photo');
+    f.appendChild(img); f.appendChild(b);
+    if (blob) { Photos.thumbs[id] = URL.createObjectURL(blob); img.src = Photos.thumbs[id]; }
+    else if (Photos.thumbs[id]) img.src = Photos.thumbs[id];
+    else { Photos.queue.push({ id: id, img: img }); phPump(); }
+    return f;
+  }
+  function phPump() {
+    while (Photos.active < 4 && Photos.queue.length) {
+      (function (t) {
+        Photos.active++;
+        phApi('?id=' + t.id + '&thumb=1').then(function (r) { return r.ok ? r.blob() : null; }).then(function (b) {
+          if (b) { Photos.thumbs[t.id] = URL.createObjectURL(b); t.img.src = Photos.thumbs[t.id]; }
+        }).catch(function () { /* leave it blank */ }).then(function () { Photos.active--; phPump(); });
+      })(Photos.queue.shift());
+    }
+  }
+  function phRefresh() {
+    if (Photos.adding) return;
+    phApi('').then(phOk).then(function (r) { return r.json(); }).then(function (d) {
+      if (Photos.adding) return;
+      var ids = (d && d.photos || []).map(function (p) { return p.id; }), id;
+      for (id in Photos.thumbs) if (ids.indexOf(id) < 0) { URL.revokeObjectURL(Photos.thumbs[id]); delete Photos.thumbs[id]; }
+      Photos.queue = []; Photos.grid.innerHTML = '';
+      ids.forEach(function (x) { Photos.grid.appendChild(phFigure(x)); });
+      phCount(); phSay('');
+    }).catch(function (e) { phSay(phWhy(e), true); });
+  }
+  Photos.grid.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('.pfig button') : null;
+    if (!b) return;
+    var f = b.parentNode, id = f.getAttribute('data-id');
+    if (!b.classList.contains('ask')) {
+      b.classList.add('ask'); b.textContent = 'Delete?';
+      setTimeout(function () { b.classList.remove('ask'); b.textContent = '×'; }, 3500);
+      return;
+    }
+    f.classList.add('wait');
+    phApi('?id=' + id, { method: 'DELETE' }).then(phOk).then(function () {
+      if (f.parentNode) f.parentNode.removeChild(f);
+      if (Photos.thumbs[id]) { URL.revokeObjectURL(Photos.thumbs[id]); delete Photos.thumbs[id]; }
+      phCount(); phSay('Deleted.'); phChanged();
+    }).catch(function (er) { f.classList.remove('wait'); phSay(phWhy(er), true); });
+  });
+  // Adding: shrink, then send the preview first and the photo second.
+  function phDecode(file) {
+    if (window.createImageBitmap) return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(function () { return phViaImg(file); });
+    return phViaImg(file);
+  }
+  function phViaImg(file) {
+    return new Promise(function (res, rej) {
+      var u = URL.createObjectURL(file), img = new Image();
+      img.onload = function () { URL.revokeObjectURL(u); res(img); };
+      img.onerror = function () { URL.revokeObjectURL(u); rej(new Error('decode')); };
+      img.src = u;
+    });
+  }
+  function phJpeg(src, max, q) {
+    var w = src.width || src.naturalWidth, h = src.height || src.naturalHeight, s = Math.min(1, max / Math.max(w, h));
+    var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(h * s));
+    var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0, c.width, c.height);
+    return new Promise(function (res, rej) { c.toBlob(function (b) { b ? res(b) : rej(new Error('encode')); }, 'image/jpeg', q); });
+  }
+  function phNewId() {
+    var t = Date.now().toString(36), r = '', a = new Uint8Array(6), i;
+    while (t.length < 8) t = '0' + t;
+    (window.crypto || window.msCrypto).getRandomValues(a);
+    for (i = 0; i < a.length; i++) r += (a[i] % 36).toString(36);
+    return t + r;
+  }
+  function phSend(id, kind, blob) {
+    return phApi('?id=' + id + '&kind=' + kind, { method: 'POST', body: blob, headers: { 'content-type': 'image/jpeg' } }).then(phOk);
+  }
+  function phOne(file) {
+    var id = phNewId(), preview;
+    return phDecode(file).then(function (src) {
+      return phJpeg(src, 360, 0.8).then(function (t) { preview = t; return phJpeg(src, 1600, 0.85); }).then(function (big) {
+        return big.size > 2400000 ? phJpeg(src, 1280, 0.7) : big;
+      }).then(function (big) { if (src.close) src.close(); return big; });
+    }).then(function (big) {
+      return phSend(id, 'thumb', preview).then(function () { return phSend(id, 'img', big); });
+    }).then(function () {
+      var e = Photos.grid.querySelector('.pempty'); if (e) e.parentNode.removeChild(e);
+      Photos.grid.insertBefore(phFigure(id, preview), Photos.grid.firstChild); phCount();
+    });
+  }
+  function phWork() {
+    if (Photos.adding) return;
+    var file = Photos.todo.shift();
+    if (!file) {
+      var d = Photos.done, f = Photos.failed;
+      phSay(f ? d + ' added, ' + f + ' failed. ' + Photos.last : (d === 1 ? 'Added 1 photo.' : 'Added ' + d + ' photos.'), !!f);
+      Photos.total = Photos.done = Photos.failed = 0; Photos.last = '';
+      if (d) phChanged();
+      return;
+    }
+    Photos.adding = true;
+    phSay('Adding ' + (Photos.done + Photos.failed + 1) + ' of ' + Photos.total + '…');
+    phOne(file).then(function () { Photos.done++; }, function (e) { Photos.failed++; Photos.last = phWhy(e, file.name || 'A photo'); }).then(function () { Photos.adding = false; phWork(); });
+  }
+  Photos.pick.addEventListener('change', function () {
+    var files = Array.prototype.slice.call(Photos.pick.files || []);
+    Photos.pick.value = '';
+    if (!files.length) return;
+    Photos.total += files.length;
+    files.forEach(function (f) { Photos.todo.push(f); });
+    phWork();
+  });
 
   // ---------- Home, and the pages you swipe between ----------
   // Home is the screen the day starts on: the clock, the weather, what is coming up on the family calendar,
@@ -3204,11 +3364,11 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   }
 
   // ---- the photo tile: the same shuffled slideshow as the photo frame, in a corner of Home
-  var Tile = new Slides(el.hPhoto, 20000);
+  var Tile = new Slides(el.hPhoto);
   Tile.failText = 'Can’t load the photos.'; Tile.tag = 't=home';
   Tile.loading = false; Tile.retryAt = 0;
   function tileSay(t) { setText(el.hEmpty, t || ''); el.hPhoto.classList.toggle('has', Tile.on); }
-  Tile.onEmpty = function () { Tile.retryAt = Date.now() + 60000; tileSay('No photos yet. Add some from a phone or laptop at /photos.html.'); };
+  Tile.onEmpty = function () { Tile.retryAt = Date.now() + 60000; tileSay('No photos yet. Add some in Settings, Photos.'); };
   // Only while Home is showing in the day look and nothing else has the screen.
   function tileWanted() {
     return Pager.at === 0 && lastMode === 'day' && document.visibilityState !== 'hidden' && !Frame.on && !Feed.on && !Light.on;
@@ -3221,7 +3381,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       if (!famAuth()) { tileSay(famNoText()); Tile.retryAt = Date.now() + 30000; return; }
       return Tile.list().then(function () {
         if (!tileWanted()) return;
-        if (!Tile.known.length) { Tile.retryAt = Date.now() + 120000; tileSay('No photos yet. Add some from a phone or laptop at /photos.html.'); return; }
+        if (!Tile.known.length) { Tile.retryAt = Date.now() + 120000; tileSay('No photos yet. Add some in Settings, Photos.'); return; }
         Tile.start(); tileSay('');
       });
     }).catch(function (e) {
@@ -4049,7 +4209,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       var tag = r.headers.get('etag') || r.headers.get('last-modified');
       if (!r.ok || !tag) return;
       if (pageTag === null) { pageTag = tag; return; }
-      var busy = Sound.playing || Light.on || Feed.on || Log.on || (Frame.on && !Frame.auto) || openOverlay || el.controls.classList.contains('show') || Baby.sheet || bTyping();
+      var busy = Sound.playing || Light.on || Feed.on || Log.on || Frame.on || openOverlay || el.controls.classList.contains('show') || Baby.sheet || bTyping();
       if (tag !== pageTag && !busy && modeNow(new Date()) === 'day') location.reload();
     }).catch(function () { /* offline; try again later */ });
   }
