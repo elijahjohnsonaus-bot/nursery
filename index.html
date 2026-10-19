@@ -19,7 +19,11 @@
   UV advice: Cancer Council (babies under 12 months out of direct sun at UV 3+).
   Air: NSW air quality categories for PM2.5 (1-hour), advice for sensitive groups.
 
-  Settings live on the device (Settings panel). Preview helpers: ?night or ?day.
+  Settings are kept on the device (Settings panel). Turn on "Shared settings" with the nursery passcode
+  and the Echo, a laptop and a phone all use the same Pip connection, location, night times, room
+  adjustment and bags. That needs the small function in netlify/functions/settings.js and a
+  NURSERY_PASSCODE environment variable in Netlify. Sounds, night light and "Logged as" stay per device.
+  Preview helpers: ?night or ?day.
   Updates: deployed from GitHub via Netlify; the page checks every 5 minutes and reloads
   itself, but only while the day look is showing and nothing is playing.
 
@@ -27,7 +31,8 @@
   the last feed, next side, nappies and sleep. It can also log to Pip (feeds, bottles, nappies, sleep,
   pump) the same way a phone does, with an outbox that survives a dropped connection. Pip's address
   and passcode are typed into Settings on the Echo (or set once with #pip=ADDRESS&pass=PASSCODE on the
-  page link), so they never sit in this file or in the public repo.
+  page link), so they never sit in this file or in the public repo. With shared settings on they are kept
+  in a private Netlify store behind the nursery passcode.
   Night feed: a dim red screen with the time since the last feed and big buttons, for 3 am.
   /test.html checks the Echo's speaker, microphone, camera and screen.
 -->
@@ -470,6 +475,14 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   <div class="panel">
     <div class="panel-head"><h2>Settings</h2><button class="btn" data-close>Done</button></div>
 
+    <div class="set" id="syncSet" hidden>
+      <h3>Shared settings</h3>
+      <p class="hint">Use the same settings on every screen: this one, a laptop and a phone. It shares the Pip connection, location, night times, room adjustment and bags. Sounds, the night light and &ldquo;Logged as&rdquo; stay on each device. Enter the nursery passcode you set in Netlify. A screen that connects takes on whatever is already shared.</p>
+      <div class="row"><input type="password" id="syncPass" placeholder="Nursery passcode" autocomplete="off" aria-label="Nursery passcode"></div>
+      <div class="row"><button class="btn primary" id="syncSave">Connect</button><span style="width:2vmin"></span><button class="btn" id="syncOff">Turn off</button></div>
+      <p class="hint" id="syncStatus"></p>
+    </div>
+
     <div class="set" id="pipSet">
       <h3>Pip</h3>
       <p class="hint">Shows the last feed, next side, nappies and sleep from your Pip app, and lets you log feeds, bottles, nappies and sleep from this screen. Use the same address and passcode as on your phones.</p>
@@ -537,7 +550,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
 (function () {
   'use strict';
 
-  var VERSION = '19 Oct 2026, v4';
+  var VERSION = '19 Oct 2026, v5';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -595,22 +608,26 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
     return out;
   }
   var settings = withDefaults(load('nursery.settings'));
-  function saveSettings() { save('nursery.settings', settings); }
+  function saveSettings() { save('nursery.settings', settings); syncSoon(); }
 
   // ---------- page mode ----------
   var params = new URLSearchParams(location.search);
   var podMode = /^(\d{1,3}\.){3}\d{1,3}$/.test(location.hostname) && !params.has('outside');
   var forced = params.has('night') ? 'night' : (params.has('day') ? 'day' : null);
 
-  // One-time setup link: page address followed by #pip=ADDRESS&pass=PASSCODE&dob=YYYY-MM-DD.
-  // A # part is never sent to the server, and it is removed from the address once saved.
+  // One-time setup link: page address followed by #key=NURSERY_PASSCODE (turns on shared settings) and/or
+  // #pip=ADDRESS&pass=PASSCODE&dob=YYYY-MM-DD. A # part is never sent to the server, and it is removed
+  // from the address once saved.
   (function () {
     var h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
-    if (!h.has('pip')) return;
-    settings.pip.host = h.get('pip') || '';
-    if (h.has('pass')) settings.pip.pass = h.get('pass') || '';
-    if (h.has('dob')) settings.pip.dob = h.get('dob') || '';
-    saveSettings();
+    if (!h.has('pip') && !h.has('key')) return;
+    if (h.has('pip')) {
+      settings.pip.host = h.get('pip') || '';
+      if (h.has('pass')) settings.pip.pass = h.get('pass') || '';
+      if (h.has('dob')) settings.pip.dob = h.get('dob') || '';
+      saveSettings();
+    }
+    if (h.get('key')) save('nursery.sync', { pass: h.get('key'), at: {}, snap: {}, first: true, last: 0 });
     try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
   })();
 
@@ -627,7 +644,8 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
     roomVal: $('roomVal'), roomNow: $('roomNow'), nightFrom: $('nightFrom'), nightTo: $('nightTo'), about: $('about'),
     pip: $('pip'), feed: $('feed'), feedInner: $('feedInner'), feedBtn: $('feedBtn'),
     pipHost: $('pipHost'), pipPass: $('pipPass'), pipDob: $('pipDob'), pipStatus: $('pipStatus'), pipBy: $('pipBy'),
-    logBtn: $('logBtn'), log: $('log'), lgBody: $('lg-body'), lgSync: $('lg-sync'), logToast: $('logToast')
+    logBtn: $('logBtn'), log: $('log'), lgBody: $('lg-body'), lgSync: $('lg-sync'), logToast: $('logToast'),
+    syncPass: $('syncPass'), syncStatus: $('syncStatus')
   };
 
   // ---------- data ----------
@@ -1094,7 +1112,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
     openOverlay = node;
     node.classList.add('open');
     if (node === el.sounds) syncSounds();
-    if (node === el.settings) { pip.dirty = false; syncSettings(); }
+    if (node === el.settings) { pip.dirty = false; sync.dirty = false; syncSettings(); syncSoon(0); }
   }
   function closePanel() {
     if (openOverlay) openOverlay.classList.remove('open');
@@ -1319,6 +1337,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
       : 'Now going by the outside temperature' + (out !== null ? ' (' + out.toFixed(1) + '°).' : '.'));
     setText(el.about, 'Updates itself when a new version is published. Version ' + VERSION + '.');
     syncPip();
+    syncUi();
   }
   el.settings.addEventListener('click', function (e) {
     var b = e.target.closest ? e.target.closest('button') : null;
@@ -1333,7 +1352,9 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
       for (var x in settings.bags) if (settings.bags[x]) count++;
       if (!(settings.bags[k] && count === 1)) settings.bags[k] = !settings.bags[k];
       drawnKey = ''; tlKey = '';
-    } else if (b.id === 'pipSave') { pipConnect(); return; }
+    } else if (b.id === 'syncSave') { syncConnect(); return; }
+    else if (b.id === 'syncOff') { syncDisconnect(); return; }
+    else if (b.id === 'pipSave') { pipConnect(); return; }
     else if (b.id === 'pipClear') { pipDisconnect(); return; }
     else if (b.id === 'pipAuto') { settings.pip.auto = !settings.pip.auto; }
     else if (b.id === 'pipLog') { settings.pip.log = settings.pip.log === false; if (!settings.pip.log && Log.on) Log.close(); }
@@ -2096,6 +2117,163 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   el.pipHost.addEventListener('keydown', function (e) { if (e.key === 'Enter') pipConnect(); });
   el.pipPass.addEventListener('keydown', function (e) { if (e.key === 'Enter') pipConnect(); });
 
+  // ---------- shared settings ----------
+  // The same settings on every device (this Echo, a laptop, a phone), kept by a small Netlify function
+  // behind the nursery passcode. Only settings that describe the nursery are shared. Sounds, the night
+  // light and the "Logged as" name stay on each device. Each setting carries the time the server last
+  // saw it change, so two devices changing different settings never overwrite each other.
+  var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'pip.host', 'pip.pass', 'pip.dob'];
+  var HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+  var BAG_KEYS = ['0.2', '1.0', '2.5', '3.5'];
+  function okStr(v, n) { return typeof v === 'string' && v.length <= n; }
+  function okNum(v, n) { return typeof v === 'number' && isFinite(v) && Math.abs(v) <= n; }
+  var SYNC_OK = {
+    place: function (v) { return !!v && typeof v === 'object' && okStr(v.name, 120) && okNum(v.lat, 90) && okNum(v.lon, 180); },
+    nightFrom: function (v) { return typeof v === 'string' && HHMM.test(v); },
+    nightTo: function (v) { return typeof v === 'string' && HHMM.test(v); },
+    offset: function (v) { return okNum(v, 40); },
+    bags: function (v) {
+      if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+      var any = false;
+      for (var k in v) { if (BAG_KEYS.indexOf(k) < 0 || typeof v[k] !== 'boolean') return false; if (v[k]) any = true; }
+      return any;
+    },
+    'pip.host': function (v) { return okStr(v, 200); },
+    'pip.pass': function (v) { return okStr(v, 200); },
+    'pip.dob': function (v) { return v === '' || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)); }
+  };
+  function skGet(k) { return k.indexOf('pip.') === 0 ? settings.pip[k.slice(4)] : settings[k]; }
+  function skSet(k, v) { if (k.indexOf('pip.') === 0) settings.pip[k.slice(4)] = v; else settings[k] = v; }
+  function skDef(k) { return k.indexOf('pip.') === 0 ? DEFAULTS.pip[k.slice(4)] : DEFAULTS[k]; }
+  // A stable text form, so the same value always compares equal however its keys were ordered.
+  function canon(v) {
+    if (Array.isArray(v)) return '[' + v.map(canon).join(',') + ']';
+    if (v && typeof v === 'object') return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + canon(v[k]); }).join(',') + '}';
+    return JSON.stringify(v === undefined ? null : v);
+  }
+
+  var syncCache = load('nursery.sync') || {};
+  var sync = {
+    pass: String(syncCache.pass || ''),
+    at: (syncCache.at && typeof syncCache.at === 'object') ? syncCache.at : {},     // server time of each setting as last seen here
+    snap: (syncCache.snap && typeof syncCache.snap === 'object') ? syncCache.snap : {}, // what the server last held for each setting
+    first: !!syncCache.first,                                                       // just connected: the shared settings win once
+    last: +syncCache.last || 0,
+    status: 'idle', code: 0, busy: false, again: false, inflight: null, timer: null, dirty: false, retry: 300
+  };
+  function syncStore() { save('nursery.sync', { pass: sync.pass, at: sync.at, snap: sync.snap, first: sync.first, last: sync.last }); }
+  function syncOn() { return !!sync.pass && !podMode && /^https?:$/.test(location.protocol); }
+  function syncShown() { return !podMode && /^https?:$/.test(location.protocol); }
+  // Settings changed here that the server hasn't seen. A setting never shared counts as changed only if it differs from the default.
+  function syncPending() {
+    return SYNC_KEYS.filter(function (k) {
+      var v = skGet(k);
+      return SYNC_OK[k](v) && canon(v) !== (k in sync.snap ? sync.snap[k] : canon(skDef(k)));
+    });
+  }
+  function syncSoon(ms) {
+    if (!sync || !syncOn()) return;
+    if (ms === undefined && !syncPending().length) return;
+    clearTimeout(sync.timer);
+    sync.timer = setTimeout(syncRun, ms === undefined ? 1500 : ms);
+  }
+
+  // Take in what the server holds. A setting changed here and not yet sent is left alone (it goes up
+  // next), except right after connecting, when the shared value wins.
+  function syncApply(keys) {
+    var flags = {}, any = false;
+    SYNC_KEYS.forEach(function (k) {
+      var e = keys[k];
+      if (!e || !(+e.at > (sync.at[k] || 0)) || !SYNC_OK[k](e.v)) return;
+      var cur = canon(skGet(k)), base = k in sync.snap ? sync.snap[k] : canon(skDef(k));
+      sync.at[k] = +e.at;
+      if (cur !== base && !sync.first) return;
+      sync.snap[k] = canon(e.v);
+      if (canon(e.v) !== cur) { skSet(k, e.v); flags[k] = true; flags[k.split('.')[0]] = true; any = true; }
+    });
+    if (!any) return;
+    if (flags.place) { weather = null; air = null; state = null; tlKey = ''; drawnKey = ''; loadWeather(); loadAir(); }
+    if (flags.bags) { drawnKey = ''; tlKey = ''; }
+    if (flags.nightFrom || flags.nightTo) override = null;
+    if (flags.offset) { state = null; roomDraft = null; }
+    if (flags.pip) { if (!pipOn()) pipReset(null); else pip.status = 'idle'; pipLoad(); }
+    saveSettings(); syncSettings(); render();
+  }
+
+  // One round trip: send what changed here (if anything) and take in what changed elsewhere.
+  function syncRun() {
+    clearTimeout(sync.timer);
+    if (!syncOn()) return Promise.resolve();
+    if (sync.busy) { sync.again = true; return sync.inflight || Promise.resolve(); }
+    sync.busy = true;
+    var sent = {}, any = false;
+    if (!sync.first) syncPending().forEach(function (k) { sent[k] = skGet(k); any = true; });
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
+    var opts = { cache: 'no-store', headers: { 'x-nursery-pass': sync.pass }, signal: ctrl ? ctrl.signal : undefined };
+    if (any) { opts.method = 'POST'; opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify({ changes: sent }); }
+    sync.inflight = fetch('/api/settings', opts).then(function (r) {
+      clearTimeout(timer);
+      sync.code = r.status;
+      if (r.status === 503) { sync.status = 'setup'; return null; }
+      if (r.status === 401) { sync.status = 'pass'; return null; }
+      if (r.status === 404) { sync.status = 'missing'; return null; }
+      if (!r.ok) { sync.status = 'error'; return null; }
+      return r.json().catch(function () { sync.status = 'error'; return null; });
+    }).then(function (d) {
+      if (!d) return;
+      if (!d.keys || typeof d.keys !== 'object') { sync.status = 'error'; return; }
+      // A sent setting counts as saved only once the server's answer holds it. Anything else stays
+      // pending and goes again, after a longer wait so a setting the server refuses can't loop.
+      sync.retry = 300;
+      Object.keys(sent).forEach(function (k) {
+        var e = d.keys[k];
+        if (e && canon(e.v) === canon(sent[k])) sync.snap[k] = canon(sent[k]); else sync.retry = 15000;
+      });
+      syncApply(d.keys);
+      sync.first = false; sync.last = Date.now(); sync.status = 'ok';
+      syncStore();
+    }).catch(function () {
+      clearTimeout(timer);
+      sync.status = 'offline';
+    }).then(function () {
+      sync.busy = false;
+      syncUi();
+      if (sync.again) { sync.again = false; syncSoon(300); }
+      else if (sync.status === 'ok' && syncPending().length) syncSoon(sync.retry || 300);
+    });
+    return sync.inflight;
+  }
+
+  function syncUi() {
+    show($('syncSet'), syncShown());
+    if (!sync.dirty) el.syncPass.value = sync.pass;
+    var t;
+    if (!sync.pass) t = 'Not turned on. These settings stay on this device only.';
+    else if (sync.status === 'ok') t = 'Shared. Last checked ' + clockText(new Date(sync.last)) + '.';
+    else if (sync.status === 'pass') t = 'That doesn’t match the passcode set in Netlify (NURSERY_PASSCODE).';
+    else if (sync.status === 'setup') t = 'Not set up on the server yet. In Netlify, open this site, then Site configuration, Environment variables, add NURSERY_PASSCODE, and redeploy.';
+    else if (sync.status === 'missing') t = 'This site doesn’t have the sharing function yet. Redeploy it from GitHub.';
+    else if (sync.status === 'offline') t = 'Can’t reach the server. It will try again.';
+    else if (sync.status === 'error') t = 'The server gave an unexpected answer' + (sync.code ? ' (error ' + sync.code + ')' : '') + '.';
+    else t = 'Connecting…';
+    setText(el.syncStatus, t);
+  }
+  function syncConnect() {
+    var p = el.syncPass.value.trim();
+    sync.dirty = false;
+    if (!p) { syncDisconnect(); return; }
+    sync.pass = p; sync.first = true; sync.at = {}; sync.snap = {}; sync.status = 'idle'; sync.code = 0;
+    syncStore(); syncUi(); syncRun();
+  }
+  function syncDisconnect() {
+    clearTimeout(sync.timer);
+    sync.pass = ''; sync.first = false; sync.at = {}; sync.snap = {}; sync.status = 'idle'; sync.dirty = false;
+    syncStore(); syncUi();
+  }
+  el.syncPass.addEventListener('input', function () { sync.dirty = true; });
+  el.syncPass.addEventListener('keydown', function (e) { if (e.key === 'Enter') syncConnect(); });
+
   // ---------- upkeep ----------
   // Shift everything a few pixels every couple of minutes so nothing sits still on the screen for months.
   function nudge() {
@@ -2118,17 +2296,20 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   }
 
   document.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { render(); pipLoad(); } });
-  window.addEventListener('online', function () { loadWeather(); loadAir(); pipLoad(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { render(); pipLoad(); syncSoon(0); } });
+  window.addEventListener('online', function () { loadWeather(); loadAir(); pipLoad(); syncSoon(0); });
 
   render();
   loadWeather();
   loadAir();
   readPod();
   pipLoad();
+  syncUi();
+  syncSoon(500);
   checkForUpdate();
   setInterval(render, 5000);
   setInterval(pipLoad, 15000);
+  setInterval(function () { syncSoon(0); }, 60000);
   setInterval(function () { if (pip.fast) renderPip(new Date()); if (Feed.on) Feed.paint(); if (Log.on) Log.tick(); }, 1000);
   setInterval(loadWeather, 15 * 60000);
   setInterval(loadAir, 30 * 60000);
