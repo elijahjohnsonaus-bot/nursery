@@ -19,11 +19,11 @@
   UV advice: Cancer Council (babies under 12 months out of direct sun at UV 3+).
   Air: NSW air quality categories for PM2.5 (1-hour), advice for sensitive groups.
 
-  Settings are kept on the device (Settings panel). Turn on "Shared settings" with the nursery passcode
-  and the Echo, a laptop and a phone all use the same Pip connection, location, night times, room
-  adjustment and bags. That needs the small function in netlify/functions/settings.js and a
-  NURSERY_PASSCODE environment variable in Netlify. Sounds, night light and "Logged as" stay per device.
-  Preview helpers: ?night or ?day.
+  Settings are shared by every device that opens this address (the Echo, a laptop, a phone): the Pip
+  connection, location, night times, room adjustment and bags are typed once and appear everywhere. There
+  is nothing to turn on. A small function in netlify/functions/settings.js keeps them. If NURSERY_PASSCODE
+  is set in Netlify the site is locked instead, and each device needs that passcode once (a #key= link or
+  Settings). Sounds, night light and "Logged as" stay per device. Preview helpers: ?night or ?day.
   Updates: deployed from GitHub via Netlify; the page checks every 5 minutes and reloads
   itself, but only while the day look is showing and nothing is playing.
 
@@ -31,9 +31,13 @@
   the last feed, next side, nappies and sleep. It can also log to Pip (feeds, bottles, nappies, sleep,
   pump) the same way a phone does, with an outbox that survives a dropped connection. Pip's address
   and passcode are typed into Settings on the Echo (or set once with #pip=ADDRESS&pass=PASSCODE on the
-  page link), so they never sit in this file or in the public repo. With shared settings on they are kept
-  in a private Netlify store behind the nursery passcode.
+  page link), so they never sit in this file or in the public repo. They are kept in a private Netlify store
+  (the Pip passcode only if the site is locked with NURSERY_PASSCODE).
   Night feed: a dim red screen with the time since the last feed and big buttons, for 3 am.
+  Family (needs shared settings, so the screen has the nursery passcode): the next two weeks of the
+  family's Apple Calendars, one colour per person, and a photo frame slideshow. The calendar links live
+  in the CALENDAR_FEEDS variable in Netlify (see netlify/functions/calendar.js). Photos are added from
+  /photos.html and kept in a private Netlify Blobs store.
   /test.html checks the Echo's speaker, microphone, camera and screen.
 -->
 <style>
@@ -300,6 +304,45 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
 .logtoast button{margin-left:3vmin; min-height:7vmin; padding:.8vmin 2.4vmin; font-size:3.2vmin; font-weight:600; background:transparent; border:.3vmin solid currentColor; border-radius:1.6vmin}
 .logtoast.red{background:#1C0704; color:#E04A2E; border:.3vmin solid #7A2214}
 
+/* ---------- controls bar: room for one more button ---------- */
+.controls{flex-wrap:wrap}
+.controls .btn{margin:.6vmin .8vmin; min-width:0; padding:1.4vmin 2.4vmin; font-size:3vmin}
+
+/* ---------- family: calendar ---------- */
+#family .panel-head{flex-wrap:wrap}
+#family .panel-head .btn{margin-bottom:1vmin}
+.cal-legend{display:flex; flex-wrap:wrap; margin-bottom:1vmin}
+.cal-key{display:flex; align-items:center; font-size:2.8vmin; margin:0 3.2vmin 1vmin 0}
+.cal-key.bad{opacity:.55}
+.cal-dot{width:2.6vmin; height:2.6vmin; border-radius:50%; margin-right:1.2vmin; flex:none}
+.cal-day{font-size:3.4vmin; font-weight:600; margin:3.4vmin 0 1.2vmin}
+.cal-day:first-child{margin-top:0}
+.cal-none{font-size:3vmin; color:var(--ink-soft); margin-bottom:1.2vmin}
+body.night .cal-none{color:var(--amber-dim)}
+.cal-ev{display:flex; align-items:stretch; margin-bottom:1.2vmin; border-radius:1.6vmin; overflow:hidden; background:var(--paper); border:.25vmin solid var(--line)}
+body.night .cal-ev{background:transparent}
+.cal-ev.past{opacity:.45}
+.cal-bar{width:1.8vmin; flex:none}
+body.night .cal-bar{filter:brightness(.6)}
+body.night .cal-dot{filter:brightness(.6)}
+.cal-t{font-size:3vmin; font-weight:500; width:25vmin; flex:none; padding:1.5vmin 2vmin; color:var(--ink-soft)}
+.cal-t small{display:block; font-size:2.4vmin; font-weight:400; margin-top:.2vmin}
+.cal-b{flex:1; min-width:0; padding:1.4vmin 2vmin 1.4vmin 0}
+.cal-b b{display:block; font-size:3.4vmin; font-weight:500; overflow-wrap:break-word}
+.cal-b small{display:block; font-size:2.6vmin; color:var(--ink-soft); margin-top:.3vmin; overflow-wrap:break-word}
+body.night .cal-t, body.night .cal-b small{color:var(--amber-dim)}
+
+/* ---------- family: photo frame ---------- */
+.frame{position:fixed; top:0; right:0; bottom:0; left:0; z-index:24; display:none; background:#000; cursor:pointer; overflow:hidden}
+.frame.on{display:block}
+body.night .frame{filter:brightness(.35) sepia(1) saturate(2.2) hue-rotate(-18deg)}
+.slide{position:absolute; top:0; right:0; bottom:0; left:0; opacity:0; transition:opacity 1.4s ease}
+.slide.show{opacity:1}
+.slide .bg{position:absolute; top:-5%; right:-5%; bottom:-5%; left:-5%; background-size:cover; background-position:center; filter:blur(3.5vmin) brightness(.5)}
+.slide img{position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain}
+.frame-note{position:absolute; left:0; right:0; bottom:0; margin:0; padding:2.4vmin 4vmin; text-align:center; font-size:3.4vmin; color:#fff; background:rgba(0,0,0,.55)}
+.frame-note:empty{display:none}
+
 /* ---------- phone or other tall screens ---------- */
 @media (max-aspect-ratio: 1/1){
   body{overflow:auto}
@@ -334,6 +377,9 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   .feed-act{flex-wrap:wrap} .fa{flex:1 1 40%; margin-bottom:2vmin; min-height:17vmin; font-size:5.6vmin} .fa small{font-size:3.6vmin}
   .logtoast{font-size:4.6vmin} .logtoast button{font-size:4.2vmin; min-height:10vmin}
   .feed.msg .feed-v{font-size:10vmin} .feed-foot{font-size:4.4vmin; flex-direction:column} .feed-hint{font-size:3.4vmin}
+  .cal-key{font-size:3.8vmin} .cal-day{font-size:4.8vmin} .cal-none{font-size:4.2vmin}
+  .cal-t{width:30vmin; font-size:4vmin} .cal-t small{font-size:3.2vmin} .cal-b b{font-size:4.6vmin} .cal-b small{font-size:3.6vmin}
+  .frame-note{font-size:4.4vmin}
 }
 @media (prefers-reduced-motion: reduce){
   body, .bag-body, .controls, .light-controls{transition:none}
@@ -399,6 +445,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   <button class="btn" data-act="light">Night light</button>
   <button class="btn" data-act="sounds">Sounds</button>
   <button class="btn" data-act="look" id="lookBtn">Night look</button>
+  <button class="btn" data-act="family" id="familyBtn">Family</button>
   <button class="btn" data-act="settings">Settings</button>
 </nav>
 
@@ -471,16 +518,34 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   </div>
 </section>
 
+<section class="overlay" id="family" aria-label="Family">
+  <div class="panel">
+    <div class="panel-head"><h2>Family</h2><div><button class="btn" id="frameBtn">Photo frame</button> <button class="btn" data-close>Done</button></div></div>
+    <p class="hint" id="famMsg" hidden></p>
+    <div class="cal-legend" id="calLegend"></div>
+    <p class="hint" id="calStatus"></p>
+    <div id="calList"></div>
+  </div>
+</section>
+
+<section class="frame" id="frame" aria-label="Photo frame">
+  <div class="slide" id="fA"><div class="bg"></div><img alt=""></div>
+  <div class="slide" id="fB"><div class="bg"></div><img alt=""></div>
+  <p class="frame-note" id="fNote"></p>
+</section>
+
 <section class="overlay" id="settings" aria-label="Settings">
   <div class="panel">
     <div class="panel-head"><h2>Settings</h2><button class="btn" data-close>Done</button></div>
 
     <div class="set" id="syncSet" hidden>
       <h3>Shared settings</h3>
-      <p class="hint">Use the same settings on every screen: this one, a laptop and a phone. It shares the Pip connection, location, night times, room adjustment and bags. Sounds, the night light and &ldquo;Logged as&rdquo; stay on each device. Enter the nursery passcode you set in Netlify. A screen that connects takes on whatever is already shared.</p>
-      <div class="row"><input type="password" id="syncPass" placeholder="Nursery passcode" autocomplete="off" aria-label="Nursery passcode"></div>
-      <div class="row"><button class="btn primary" id="syncSave">Connect</button><span style="width:2vmin"></span><button class="btn" id="syncOff">Turn off</button></div>
+      <p class="hint">Every screen that opens this address (this one, a laptop, a phone) uses the same Pip connection, location, night times, room adjustment and bags, so you only type them once. Sounds, the night light and &ldquo;Logged as&rdquo; stay on each device.</p>
       <p class="hint" id="syncStatus"></p>
+      <div id="syncLock" hidden>
+        <div class="row"><input type="password" id="syncPass" placeholder="Nursery passcode" autocomplete="off" aria-label="Nursery passcode"></div>
+        <div class="row"><button class="btn primary" id="syncSave">Connect</button><span style="width:2vmin"></span><button class="btn" id="syncOff">Turn off</button></div>
+      </div>
     </div>
 
     <div class="set" id="pipSet">
@@ -550,7 +615,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
 (function () {
   'use strict';
 
-  var VERSION = '19 Oct 2026, v5';
+  var VERSION = '19 Oct 2026, v6';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -645,7 +710,9 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
     pip: $('pip'), feed: $('feed'), feedInner: $('feedInner'), feedBtn: $('feedBtn'),
     pipHost: $('pipHost'), pipPass: $('pipPass'), pipDob: $('pipDob'), pipStatus: $('pipStatus'), pipBy: $('pipBy'),
     logBtn: $('logBtn'), log: $('log'), lgBody: $('lg-body'), lgSync: $('lg-sync'), logToast: $('logToast'),
-    syncPass: $('syncPass'), syncStatus: $('syncStatus')
+    syncPass: $('syncPass'), syncStatus: $('syncStatus'),
+    family: $('family'), calList: $('calList'), calLegend: $('calLegend'), calStatus: $('calStatus'), famMsg: $('famMsg'),
+    frame: $('frame'), fNote: $('fNote'), familyBtn: $('familyBtn')
   };
 
   // ---------- data ----------
@@ -994,6 +1061,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
     if (mode !== lastMode) {
       document.body.classList.toggle('night', mode === 'night');
       applyBrightness(mode);
+      if (mode === 'night' && Frame && Frame.on) Frame.close();   // the photo frame gives way when the night look starts
       lastMode = mode;
       tlKey = '';
     }
@@ -1096,6 +1164,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
     else if (act === 'feed') Feed.open();
     else if (act === 'log') Log.open('main');
     else if (act === 'sounds') openPanel(el.sounds);
+    else if (act === 'family') openPanel(el.family);
     else if (act === 'settings') openPanel(el.settings);
     else if (act === 'look') {
       var now = new Date();
@@ -1112,6 +1181,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
     openOverlay = node;
     node.classList.add('open');
     if (node === el.sounds) syncSounds();
+    if (node === el.family) familyOpen();
     if (node === el.settings) { pip.dirty = false; sync.dirty = false; syncSettings(); syncSoon(0); }
   }
   function closePanel() {
@@ -2118,10 +2188,13 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   el.pipPass.addEventListener('keydown', function (e) { if (e.key === 'Enter') pipConnect(); });
 
   // ---------- shared settings ----------
-  // The same settings on every device (this Echo, a laptop, a phone), kept by a small Netlify function
-  // behind the nursery passcode. Only settings that describe the nursery are shared. Sounds, the night
-  // light and the "Logged as" name stay on each device. Each setting carries the time the server last
-  // saw it change, so two devices changing different settings never overwrite each other.
+  // The same settings on every device (this Echo, a laptop, a phone), kept by a small Netlify function.
+  // Opening the site is enough: a device asks the server and joins by itself, so the Pip address typed on
+  // a laptop is already on the Echo. If NURSERY_PASSCODE is set in Netlify the site is locked instead, and
+  // each device needs the passcode once. Only settings that describe the nursery are shared. Sounds, the
+  // night light and the "Logged as" name stay on each device. Each setting carries the time the server
+  // last saw it change, so two devices changing different settings never overwrite each other. While the
+  // site is open the Pip passcode is not stored on the server (a locked site shares it too).
   var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'pip.host', 'pip.pass', 'pip.dob'];
   var HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
   var BAG_KEYS = ['0.2', '1.0', '2.5', '3.5'];
@@ -2155,25 +2228,30 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   var syncCache = load('nursery.sync') || {};
   var sync = {
     pass: String(syncCache.pass || ''),
+    open: !!syncCache.open,                                                         // the server is not locked, so no passcode is needed
     at: (syncCache.at && typeof syncCache.at === 'object') ? syncCache.at : {},     // server time of each setting as last seen here
     snap: (syncCache.snap && typeof syncCache.snap === 'object') ? syncCache.snap : {}, // what the server last held for each setting
     first: !!syncCache.first,                                                       // just connected: the shared settings win once
     last: +syncCache.last || 0,
     status: 'idle', code: 0, busy: false, again: false, inflight: null, timer: null, dirty: false, retry: 300
   };
-  function syncStore() { save('nursery.sync', { pass: sync.pass, at: sync.at, snap: sync.snap, first: sync.first, last: sync.last }); }
-  function syncOn() { return !!sync.pass && !podMode && /^https?:$/.test(location.protocol); }
+  function syncStore() { save('nursery.sync', { pass: sync.pass, open: sync.open, at: sync.at, snap: sync.snap, first: sync.first, last: sync.last }); }
   function syncShown() { return !podMode && /^https?:$/.test(location.protocol); }
+  function syncOn() { return syncShown() && (!!sync.pass || sync.open); }
+  // Not joined yet: ask the server, with no passcode, whether it is open.
+  function syncProbing() { return syncShown() && !sync.pass && !sync.open; }
+  // What is shared. The Pip passcode only goes to a locked server.
+  function syncKeys() { return sync.open ? SYNC_KEYS.filter(function (k) { return k !== 'pip.pass'; }) : SYNC_KEYS; }
   // Settings changed here that the server hasn't seen. A setting never shared counts as changed only if it differs from the default.
   function syncPending() {
-    return SYNC_KEYS.filter(function (k) {
+    return syncKeys().filter(function (k) {
       var v = skGet(k);
       return SYNC_OK[k](v) && canon(v) !== (k in sync.snap ? sync.snap[k] : canon(skDef(k)));
     });
   }
   function syncSoon(ms) {
-    if (!sync || !syncOn()) return;
-    if (ms === undefined && !syncPending().length) return;
+    if (!sync || !syncShown()) return;
+    if (ms === undefined && (!syncOn() || !syncPending().length)) return;
     clearTimeout(sync.timer);
     sync.timer = setTimeout(syncRun, ms === undefined ? 1500 : ms);
   }
@@ -2182,7 +2260,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   // next), except right after connecting, when the shared value wins.
   function syncApply(keys) {
     var flags = {}, any = false;
-    SYNC_KEYS.forEach(function (k) {
+    syncKeys().forEach(function (k) {
       var e = keys[k];
       if (!e || !(+e.at > (sync.at[k] || 0)) || !SYNC_OK[k](e.v)) return;
       var cur = canon(skGet(k)), base = k in sync.snap ? sync.snap[k] : canon(skDef(k));
@@ -2203,30 +2281,35 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   // One round trip: send what changed here (if anything) and take in what changed elsewhere.
   function syncRun() {
     clearTimeout(sync.timer);
-    if (!syncOn()) return Promise.resolve();
+    if (!syncShown()) return Promise.resolve();
     if (sync.busy) { sync.again = true; return sync.inflight || Promise.resolve(); }
     sync.busy = true;
-    var sent = {}, any = false;
+    var probing = syncProbing(), sent = {}, any = false;
+    if (probing) sync.first = true;       // nothing goes up until the server has been asked, and it wins the first time
     if (!sync.first) syncPending().forEach(function (k) { sent[k] = skGet(k); any = true; });
     var ctrl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 20000);
-    var opts = { cache: 'no-store', headers: { 'x-nursery-pass': sync.pass }, signal: ctrl ? ctrl.signal : undefined };
+    var opts = { cache: 'no-store', headers: sync.pass ? { 'x-nursery-pass': sync.pass } : {}, signal: ctrl ? ctrl.signal : undefined };
     if (any) { opts.method = 'POST'; opts.headers['content-type'] = 'application/json'; opts.body = JSON.stringify({ changes: sent }); }
     sync.inflight = fetch('/api/settings', opts).then(function (r) {
       clearTimeout(timer);
       sync.code = r.status;
       if (r.status === 503) { sync.status = 'setup'; return null; }
-      if (r.status === 401) { sync.status = 'pass'; return null; }
+      if (r.status === 401) { sync.status = 'pass'; if (!sync.pass && sync.open) { sync.open = false; syncStore(); } return null; }
       if (r.status === 404) { sync.status = 'missing'; return null; }
       if (!r.ok) { sync.status = 'error'; return null; }
       return r.json().catch(function () { sync.status = 'error'; return null; });
     }).then(function (d) {
       if (!d) return;
       if (!d.keys || typeof d.keys !== 'object') { sync.status = 'error'; return; }
+      if (d.open === true && !sync.open) sync.open = true;    // joined: the site is open
+      else if (d.open !== true && sync.open) sync.open = false;
+      if (probing && !sync.open) { sync.status = 'pass'; return; }   // an old function that wants a passcode
       // A sent setting counts as saved only once the server's answer holds it. Anything else stays
       // pending and goes again, after a longer wait so a setting the server refuses can't loop.
       sync.retry = 300;
       Object.keys(sent).forEach(function (k) {
+        if (syncKeys().indexOf(k) < 0) return;
         var e = d.keys[k];
         if (e && canon(e.v) === canon(sent[k])) sync.snap[k] = canon(sent[k]); else sync.retry = 15000;
       });
@@ -2238,6 +2321,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
       sync.status = 'offline';
     }).then(function () {
       sync.busy = false;
+      if (probing && sync.first && !syncOn()) sync.first = false;
       syncUi();
       if (sync.again) { sync.again = false; syncSoon(300); }
       else if (sync.status === 'ok' && syncPending().length) syncSoon(sync.retry || 300);
@@ -2248,15 +2332,15 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   function syncUi() {
     show($('syncSet'), syncShown());
     if (!sync.dirty) el.syncPass.value = sync.pass;
+    show($('syncLock'), !!sync.pass || sync.status === 'pass');
     var t;
-    if (!sync.pass) t = 'Not turned on. These settings stay on this device only.';
-    else if (sync.status === 'ok') t = 'Shared. Last checked ' + clockText(new Date(sync.last)) + '.';
-    else if (sync.status === 'pass') t = 'That doesn’t match the passcode set in Netlify (NURSERY_PASSCODE).';
-    else if (sync.status === 'setup') t = 'Not set up on the server yet. In Netlify, open this site, then Site configuration, Environment variables, add NURSERY_PASSCODE, and redeploy.';
+    if (sync.status === 'ok' && syncOn()) t = (sync.pass ? 'Shared. ' : 'Shared with every screen that opens this address. ') + 'Last checked ' + clockText(new Date(sync.last)) + '.';
+    else if (sync.status === 'pass') t = sync.pass ? 'That doesn’t match the passcode set in Netlify (NURSERY_PASSCODE).' : 'This site is locked with a passcode (NURSERY_PASSCODE in Netlify). Enter it below once on this screen to share settings.';
+    else if (sync.status === 'setup') t = 'The server isn’t ready yet. Try again once the site has finished redeploying.';
     else if (sync.status === 'missing') t = 'This site doesn’t have the sharing function yet. Redeploy it from GitHub.';
     else if (sync.status === 'offline') t = 'Can’t reach the server. It will try again.';
     else if (sync.status === 'error') t = 'The server gave an unexpected answer' + (sync.code ? ' (error ' + sync.code + ')' : '') + '.';
-    else t = 'Connecting…';
+    else t = syncOn() || syncProbing() ? 'Connecting…' : 'Not connected.';
     setText(el.syncStatus, t);
   }
   function syncConnect() {
@@ -2269,10 +2353,242 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   function syncDisconnect() {
     clearTimeout(sync.timer);
     sync.pass = ''; sync.first = false; sync.at = {}; sync.snap = {}; sync.status = 'idle'; sync.dirty = false;
-    syncStore(); syncUi();
+    syncStore(); syncUi(); syncSoon(0);
   }
   el.syncPass.addEventListener('input', function () { sync.dirty = true; });
   el.syncPass.addEventListener('keydown', function (e) { if (e.key === 'Enter') syncConnect(); });
+
+  // ---------- family: calendar and photo frame ----------
+  // Both come from small Netlify functions. They need nothing on the device unless the site is locked with
+  // NURSERY_PASSCODE, in which case they use the passcode this device already has for shared settings.
+  // The calendar is the family's Apple Calendar shared links, one colour per person, set in Netlify
+  // (CALENDAR_FEEDS). The photo frame shows what was added at /photos.html.
+  var Cal = (function () {
+    var c = load('nursery.cal');
+    return { data: c && c.data && c.data.events ? c.data : null, at: c && +c.at || 0, status: 'idle', code: 0, busy: false, inflight: null };
+  })();
+  // The headers to send, or null when this device can't use the server yet (not joined, or the site is
+  // locked and this device has no passcode).
+  function famAuth() { return syncOn() ? (sync.pass ? { 'x-nursery-pass': sync.pass } : {}) : null; }
+  // A screen that has only just opened may not have asked the server yet, so ask first.
+  function famReady() { return famAuth() || !syncShown() || sync.status === 'pass' ? Promise.resolve() : syncRun().catch(function () { /* the status says why */ }); }
+  function famNoText() {
+    if (sync.status === 'pass') return 'This site is locked with a passcode. Enter it in Settings, Shared settings, once on this screen.';
+    if (sync.status === 'missing') return 'This site doesn’t have the sharing function yet. Redeploy it from GitHub.';
+    if (sync.status === 'offline') return 'Can’t reach the server.';
+    return 'Not connected to the server yet. Try again in a moment.';
+  }
+  function famMsg(t) { setText(el.famMsg, t); show(el.famMsg, !!t); }
+  function hexOk(c) { return /^#[0-9a-f]{3,8}$/i.test(c || ''); }
+  function addDays(ms, n) { var x = new Date(ms); x.setDate(x.getDate() + n); return x.getTime(); }
+  function dayMs(s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).getTime(); }
+
+  function calLoad() {
+    var h = famAuth();
+    if (!h) { Cal.status = 'nopass'; calRender(); return Promise.resolve(); }
+    if (Cal.busy) return Cal.inflight || Promise.resolve();
+    Cal.busy = true;
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 25000);
+    Cal.inflight = fetch('/api/calendar?days=14', { cache: 'no-store', headers: h, signal: ctrl ? ctrl.signal : undefined }).then(function (r) {
+      clearTimeout(timer);
+      Cal.code = r.status;
+      if (r.status === 401) { Cal.status = 'pass'; return null; }
+      if (r.status === 404) { Cal.status = 'missing'; return null; }
+      return r.json().then(function (d) {
+        if (r.status === 503) { Cal.status = d && d.error === 'no-feeds' ? 'nofeeds' : 'setup'; return null; }
+        if (!r.ok) { Cal.status = 'error'; return null; }
+        return d;
+      }, function () { Cal.status = 'error'; return null; });
+    }).then(function (d) {
+      if (!d) return;
+      if (!d.events || !d.feeds) { Cal.status = 'error'; return; }
+      Cal.data = d; Cal.at = Date.now(); Cal.status = 'ok';
+      save('nursery.cal', { at: Cal.at, data: d });
+    }).catch(function () { clearTimeout(timer); Cal.status = 'offline'; }).then(function () { Cal.busy = false; calRender(); });
+    return Cal.inflight;
+  }
+
+  function calStatusText() {
+    var st = Cal.status;
+    if (st === 'nopass') return famNoText();
+    if (st === 'pass') return 'The nursery passcode doesn’t match the one in Netlify. Check Settings, Shared settings.';
+    if (st === 'setup') return 'The server isn’t ready yet. Try again once the site has finished redeploying.';
+    if (st === 'nofeeds') return 'No calendars yet. In Netlify add CALENDAR_FEEDS, one line per person like Name|webcal://…, and redeploy.';
+    if (st === 'missing') return 'This site doesn’t have the calendar function yet. Redeploy it from GitHub.';
+    if (st === 'error') return 'The server gave an unexpected answer' + (Cal.code ? ' (error ' + Cal.code + ')' : '') + '.';
+    if (st === 'offline') return 'Can’t reach the server.' + (Cal.at ? ' Showing the calendar as it was at ' + clockText(new Date(Cal.at)) + '.' : '');
+    if (st === 'ok') {
+      var bad = (Cal.data.feeds || []).filter(function (f) { return !f.ok; }).map(function (f) { return f.name + ' can’t be read (' + f.error + ')'; });
+      return 'Updated ' + clockText(new Date(Cal.at)) + '.' + (bad.length ? ' ' + bad.join('. ') + '.' : '');
+    }
+    return Cal.at ? 'Updated ' + clockText(new Date(Cal.at)) + '.' : 'Loading…';
+  }
+
+  function calRender() {
+    var st = Cal.status, d = Cal.data;
+    var hidden = st === 'nopass' || st === 'pass' || st === 'setup' || st === 'nofeeds' || st === 'missing';
+    if (hidden) d = null;
+    setText(el.calStatus, calStatusText());
+    el.calLegend.innerHTML = '';
+    el.calList.innerHTML = '';
+    if (!d) return;
+    (d.feeds || []).forEach(function (f) {
+      var k = document.createElement('span'); k.className = 'cal-key' + (f.ok ? '' : ' bad');
+      var dot = document.createElement('i'); dot.className = 'cal-dot'; if (hexOk(f.color)) dot.style.background = f.color;
+      k.appendChild(dot); k.appendChild(document.createTextNode(f.name));
+      el.calLegend.appendChild(k);
+    });
+
+    var now = new Date(), today0 = startOfDay(now).getTime(), horizon = addDays(today0, 14);
+    var days = {}, order = [];
+    function put(day, row) { if (!days[day]) { days[day] = []; order.push(day); } days[day].push(row); }
+    (d.events || []).forEach(function (e) {
+      var f = (d.feeds || [])[e.who];
+      if (!f) return;
+      var row = { title: String(e.title || '(no title)'), where: String(e.where || ''), who: f.name, color: f.color, allDay: !!e.allDay };
+      if (e.allDay) {
+        for (var t = Math.max(dayMs(e.day), today0), last = dayMs(e.endDay); t < last && t < horizon; t = addDays(t, 1)) put(t, row);
+      } else {
+        row.start = +e.start; row.end = +e.end;
+        if (row.start >= today0 && row.start < horizon) put(startOfDay(new Date(row.start)).getTime(), row);
+      }
+    });
+    if (!days[today0]) { days[today0] = []; order.push(today0); }
+    order.sort(function (a, b) { return a - b; });
+
+    order.forEach(function (day) {
+      var h = document.createElement('p'); h.className = 'cal-day';
+      h.textContent = day === today0 ? 'Today' : (day === addDays(today0, 1) ? 'Tomorrow' : dateText(new Date(day)));
+      el.calList.appendChild(h);
+      var rows = days[day];
+      rows.sort(function (a, b) { return (a.allDay ? -1 : a.start) - (b.allDay ? -1 : b.start); });
+      if (!rows.length) { var n = document.createElement('p'); n.className = 'cal-none'; n.textContent = 'Nothing on.'; el.calList.appendChild(n); }
+      rows.forEach(function (r) {
+        var ev = document.createElement('div'); ev.className = 'cal-ev' + (!r.allDay && r.end < now.getTime() ? ' past' : '');
+        var bar = document.createElement('span'); bar.className = 'cal-bar'; if (hexOk(r.color)) bar.style.background = r.color;
+        var tm = document.createElement('span'); tm.className = 'cal-t';
+        if (r.allDay) tm.textContent = 'All day';
+        else {
+          tm.textContent = clockText(new Date(r.start));
+          if (r.end - r.start >= MIN) {
+            var u = document.createElement('small');
+            var same = startOfDay(new Date(r.end)).getTime() === day;
+            u.textContent = 'until ' + (same ? '' : dateText(new Date(r.end)) + ' ') + clockText(new Date(r.end));
+            tm.appendChild(u);
+          }
+        }
+        var body = document.createElement('span'); body.className = 'cal-b';
+        var b = document.createElement('b'); b.textContent = r.title; body.appendChild(b);
+        var s = document.createElement('small'); s.textContent = r.who + (r.where ? ' · ' + r.where.replace(/\s*\n\s*/g, ', ') : ''); body.appendChild(s);
+        ev.appendChild(bar); ev.appendChild(tm); ev.appendChild(body);
+        el.calList.appendChild(ev);
+      });
+    });
+    if (!(d.events || []).length) {
+      var none = document.createElement('p'); none.className = 'cal-none'; none.textContent = 'Nothing coming up in the next two weeks.';
+      el.calList.appendChild(none);
+    }
+  }
+
+  function familyOpen() {
+    famMsg('');
+    calRender();
+    famReady().then(function () {
+      if (!el.family.classList.contains('open')) return;
+      if (!Cal.at || Date.now() - Cal.at > 60000 || Cal.status !== 'ok') calLoad(); else calRender();
+    });
+  }
+
+  // ---- photo frame
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  var Frame = {
+    on: false, ids: [], i: 0, timer: null, front: 'A', urls: {}, run: 0,
+    list: function () {
+      var h = famAuth();
+      if (!h) return Promise.reject(Object.assign(new Error('pass'), { status: 401 }));
+      return fetch('/api/photos', { cache: 'no-store', headers: h }).then(function (r) {
+        if (!r.ok) throw Object.assign(new Error('http'), { status: r.status });
+        return r.json();
+      }).then(function (d) {
+        var ids = (d.photos || []).map(function (p) { return p.id; });
+        if (ids.slice().sort().join() !== Frame.ids.slice().sort().join()) Frame.ids = shuffle(ids);
+      });
+    },
+    open: function () {
+      famMsg('Loading photos…');
+      famReady().then(function () {
+        if (!famAuth()) { famMsg(famNoText()); throw null; }
+        return Frame.list();
+      }).then(function () {
+        if (!Frame.ids.length) { famMsg('No photos yet. Add some from a phone or laptop at /photos.html.'); return; }
+        famMsg('');
+        closePanel();
+        Frame.on = true; Frame.i = 0; Frame.run++;
+        el.frame.classList.add('on');
+        Frame.next(true);
+      }).catch(function (e) {
+        if (!e) return;
+        famMsg(e && e.status === 401 ? 'The nursery passcode doesn’t match the one in Netlify.' :
+          e && e.status === 503 ? 'The server isn’t ready yet. Try again once the site has finished redeploying.' :
+          e && e.status === 404 ? 'This site doesn’t have the photos function yet. Redeploy it from GitHub.' : 'Can’t load the photos. Check the connection.');
+      });
+    },
+    next: function (first) {
+      if (!Frame.on) return;
+      clearTimeout(Frame.timer);
+      if (!Frame.ids.length) { Frame.close(); return; }
+      var run = Frame.run, id =Frame.ids[Frame.i % Frame.ids.length], back = Frame.front === 'A' ? 'B' : 'A';
+      Frame.i++;
+      if (Frame.i % Frame.ids.length === 0) Frame.list().catch(function () { /* try again next lap */ });
+      function later(ms) { Frame.timer = setTimeout(function () { Frame.next(); }, ms); }
+      fetch('/api/photos?id=' + encodeURIComponent(id), { headers: famAuth() || {} }).then(function (r) {
+        if (!r.ok) throw new Error('http');
+        return r.blob();
+      }).then(function (b) {
+        if (!Frame.on || run !== Frame.run) return;
+        var url = URL.createObjectURL(b), slide = $('f' + back), img = slide.getElementsByTagName('img')[0];
+        img.onload = function () {
+          if (!Frame.on || run !== Frame.run) { URL.revokeObjectURL(url); return; }
+          slide.getElementsByClassName('bg')[0].style.backgroundImage = 'url("' + url + '")';
+          slide.classList.add('show');
+          $('f' + Frame.front).classList.remove('show');
+          var old = Frame.urls[Frame.front];
+          if (old) setTimeout(function () { URL.revokeObjectURL(old); }, 2500);
+          Frame.urls[back] = url; Frame.front = back;
+          setText(el.fNote, '');
+          later(20000);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); if (Frame.on && run === Frame.run) later(5000); };
+        img.src = url;
+      }).catch(function () {
+        if (!Frame.on || run !== Frame.run) return;
+        if (first) setText(el.fNote, 'Can’t load the photos. Tap to go back.');
+        later(first ? 8000 : 30000);
+      });
+    },
+    close: function () {
+      if (!Frame.on) return;
+      Frame.on = false; Frame.run++;
+      clearTimeout(Frame.timer);
+      el.frame.classList.remove('on');
+      ['A', 'B'].forEach(function (k) {
+        var s = $('f' + k); s.classList.remove('show'); s.getElementsByTagName('img')[0].removeAttribute('src');
+        s.getElementsByClassName('bg')[0].style.backgroundImage = '';
+        if (Frame.urls[k]) { URL.revokeObjectURL(Frame.urls[k]); Frame.urls[k] = ''; }
+      });
+      setText(el.fNote, '');
+      render();
+    }
+  };
+  el.frame.addEventListener('click', function () { Frame.close(); });
+  $('frameBtn').addEventListener('click', function () { Frame.open(); });
+  setInterval(function () {
+    if (openOverlay === el.family) { calRender(); if (Date.now() - Cal.at > 5 * 60000) calLoad(); }
+  }, 30000);
 
   // ---------- upkeep ----------
   // Shift everything a few pixels every couple of minutes so nothing sits still on the screen for months.
@@ -2290,7 +2606,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
       var tag = r.headers.get('etag') || r.headers.get('last-modified');
       if (!r.ok || !tag) return;
       if (pageTag === null) { pageTag = tag; return; }
-      var busy = Sound.playing || Light.on || Feed.on || Log.on || openOverlay || el.controls.classList.contains('show');
+      var busy = Sound.playing || Light.on || Feed.on || Log.on || Frame.on || openOverlay || el.controls.classList.contains('show');
       if (tag !== pageTag && !busy && modeNow(new Date()) === 'day') location.reload();
     }).catch(function () { /* offline; try again later */ });
   }
@@ -2306,6 +2622,7 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
   pipLoad();
   syncUi();
   syncSoon(500);
+  show(el.familyBtn, syncShown());
   checkForUpdate();
   setInterval(render, 5000);
   setInterval(pipLoad, 15000);

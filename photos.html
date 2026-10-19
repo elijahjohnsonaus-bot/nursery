@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#F3F6F8">
+<title>Nursery photos</title>
+<!--
+  Add and remove the photos shown on the nursery screen's photo frame. Open it on a phone or laptop.
+  It needs the nursery passcode (NURSERY_PASSCODE in Netlify). If shared settings are already on for this
+  device the passcode is picked up by itself; otherwise type it once, or open /photos.html#key=PASSCODE.
+  Every photo is shrunk here and saved again as a JPEG, so what is stored is small and carries no
+  location. Files live in a private Netlify Blobs store, behind /api/photos.
+-->
+<style>
+:root{--ink:#1D2935; --soft:#485665; --paper:#FFFFFF; --wash:#F3F6F8; --line:rgba(29,41,53,.2); --accent:#2E72B2; --bad:#B5412D}
+@media (prefers-color-scheme: dark){:root{--ink:#E8EDF1; --soft:#A9B5C0; --paper:#1B242D; --wash:#10161C; --line:rgba(232,237,241,.22); --accent:#7DB4E6; --bad:#F08A78}}
+*{box-sizing:border-box}
+body{margin:0; font:17px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:var(--wash)}
+main{max-width:980px; margin:0 auto; padding:20px 16px 60px}
+header{display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:8px}
+h1{font-size:26px; margin:0}
+a{color:var(--accent)}
+.hint{color:var(--soft); margin:6px 0 16px}
+.bar{display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:12px}
+.btn{font:inherit; font-weight:600; padding:12px 20px; border-radius:12px; border:2px solid var(--ink); background:transparent; color:var(--ink); cursor:pointer; min-height:48px}
+.btn.primary{background:var(--ink); color:var(--paper)}
+.btn.small{font-weight:500; padding:8px 14px; min-height:40px}
+input[type=password]{font:inherit; padding:12px 14px; border-radius:12px; border:2px solid var(--line); background:var(--paper); color:var(--ink); min-width:240px; max-width:100%}
+#msg{min-height:1.5em; margin:4px 0 12px; color:var(--soft)}
+#msg.bad{color:var(--bad)}
+#grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px}
+figure{position:relative; margin:0; aspect-ratio:1; background:var(--paper); border:1px solid var(--line); border-radius:12px; overflow:hidden}
+figure img{width:100%; height:100%; object-fit:cover; display:block}
+figure button{position:absolute; top:6px; right:6px; font:inherit; font-size:15px; font-weight:600; min-width:40px; min-height:40px; padding:0 10px; border-radius:20px; border:0; background:rgba(0,0,0,.62); color:#fff; cursor:pointer}
+figure button.ask{background:var(--bad)}
+figure.wait::after{content:""; position:absolute; inset:0; background:var(--paper); opacity:.6}
+.empty{color:var(--soft)}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Nursery photos</h1><a href="/">Nursery screen</a></header>
+
+  <section id="login" hidden>
+    <p class="hint">This site is locked. Enter the nursery passcode (the one set as NURSERY_PASSCODE in Netlify).</p>
+    <div class="bar"><input type="password" id="pass" placeholder="Nursery passcode" autocomplete="off" aria-label="Nursery passcode"><button class="btn primary" id="go">Open</button></div>
+  </section>
+
+  <section id="app" hidden>
+    <p class="hint">Photos added here show up on the nursery screen's photo frame (Family, then Photo frame). They are shrunk before they are saved.</p>
+    <div class="bar">
+      <label class="btn primary" for="pick">Add photos</label>
+      <input type="file" id="pick" accept="image/*" multiple hidden>
+      <span id="count" class="hint" style="margin:0"></span>
+      <button class="btn small" id="out">Sign out</button>
+    </div>
+    <p id="msg" role="status"></p>
+    <div id="grid"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+  function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
+  function drop(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } }
+
+  // The site is open unless NURSERY_PASSCODE is set in Netlify, and then the passcode comes from a #key=
+  // link (removed from the address once saved), from this page's own memory, or from the nursery screen's
+  // shared settings on this device, or is typed here.
+  var h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  if (h.get('key')) {
+    save('nursery.photos', { pass: h.get('key') });
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
+  }
+  var pass = (load('nursery.photos') || {}).pass || (load('nursery.sync') || {}).pass || '';
+
+  var grid = $('grid'), msg = $('msg'), thumbs = [], active = 0, urls = [];
+
+  function say(text, bad) { msg.textContent = text; msg.className = bad ? 'bad' : ''; }
+  function api(query, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign(pass ? { 'x-nursery-pass': pass } : {}, opts.headers || {});
+    opts.cache = 'no-store';
+    return fetch('/api/photos' + query, opts);
+  }
+  function problem(status) {
+    if (status === 503) return 'The server is not ready yet. Try again once the site has finished redeploying.';
+    if (status === 401) return pass ? 'That passcode does not match the one in Netlify.' : '';
+    if (status === 404) return 'This site does not have the photos function yet. Redeploy it from GitHub.';
+    return 'Something went wrong (error ' + status + '). Try again.';
+  }
+  function showLogin(text) {
+    $('app').hidden = true; $('login').hidden = false;
+    if (text) { say(text, true); msg.parentNode !== $('login') && $('login').appendChild(msg); }
+  }
+  function showApp() {
+    $('login').hidden = true; $('app').hidden = false;
+    $('out').hidden = !pass;
+    $('app').insertBefore(msg, grid);
+  }
+
+  // ---- gallery
+  function figure(id, blob) {
+    var f = document.createElement('figure'); f.setAttribute('data-id', id);
+    var img = document.createElement('img'); img.alt = ''; img.loading = 'lazy';
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = '✕'; b.setAttribute('aria-label', 'Delete this photo');
+    f.appendChild(img); f.appendChild(b);
+    if (blob) { var u = URL.createObjectURL(blob); urls.push(u); img.src = u; } else { thumbs.push({ id: id, img: img }); pump(); }
+    return f;
+  }
+  function pump() {
+    while (active < 4 && thumbs.length) {
+      (function (t) {
+        active++;
+        api('?id=' + t.id + '&thumb=1').then(function (r) { return r.ok ? r.blob() : null; }).then(function (b) {
+          if (b) { var u = URL.createObjectURL(b); urls.push(u); t.img.src = u; }
+        }).catch(function () { /* leave it blank */ }).then(function () { active--; pump(); });
+      })(thumbs.shift());
+    }
+  }
+  function counts() {
+    var n = grid.querySelectorAll('figure').length;
+    $('count').textContent = n ? n + (n === 1 ? ' photo' : ' photos') : '';
+    if (!n && !grid.querySelector('.empty')) { var p = document.createElement('p'); p.className = 'empty'; p.textContent = 'No photos yet. Tap Add photos.'; grid.appendChild(p); }
+    if (n) { var e = grid.querySelector('.empty'); if (e) e.remove(); }
+  }
+  function refresh() {
+    return api('').then(function (r) {
+      if (!r.ok) { showLogin(problem(r.status)); return null; }
+      return r.json();
+    }).then(function (d) {
+      if (!d) return;
+      showApp(); say('');
+      thumbs = []; urls.forEach(function (u) { URL.revokeObjectURL(u); }); urls = [];
+      grid.innerHTML = '';
+      d.photos.forEach(function (p) { grid.appendChild(figure(p.id)); });
+      counts();
+    }).catch(function () { showApp(); say('Can’t reach the server. Check the connection and try again.', true); });
+  }
+  grid.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('figure button') : null;
+    if (!b) return;
+    var f = b.parentNode, id = f.getAttribute('data-id');
+    if (!b.classList.contains('ask')) {
+      b.classList.add('ask'); b.textContent = 'Delete?';
+      setTimeout(function () { b.classList.remove('ask'); b.textContent = '✕'; }, 3500);
+      return;
+    }
+    f.classList.add('wait');
+    api('?id=' + id, { method: 'DELETE' }).then(function (r) {
+      if (!r.ok) { f.classList.remove('wait'); say(problem(r.status), true); return; }
+      f.remove(); counts(); say('Deleted.');
+    }).catch(function () { f.classList.remove('wait'); say('Can’t reach the server.', true); });
+  });
+
+  // ---- adding photos: shrink, then send the preview first and the photo second
+  function decode(file) {
+    if (window.createImageBitmap) {
+      return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(function () { return viaImg(file); });
+    }
+    return viaImg(file);
+  }
+  function viaImg(file) {
+    return new Promise(function (res, rej) {
+      var u = URL.createObjectURL(file), img = new Image();
+      img.onload = function () { URL.revokeObjectURL(u); res(img); };
+      img.onerror = function () { URL.revokeObjectURL(u); rej(new Error('decode')); };
+      img.src = u;
+    });
+  }
+  function jpeg(src, max, q) {
+    var w = src.width || src.naturalWidth, hgt = src.height || src.naturalHeight, s = Math.min(1, max / Math.max(w, hgt));
+    var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * s)); c.height = Math.max(1, Math.round(hgt * s));
+    var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0, c.width, c.height);
+    return new Promise(function (res, rej) { c.toBlob(function (b) { b ? res(b) : rej(new Error('encode')); }, 'image/jpeg', q); });
+  }
+  function newId() {
+    var t = Date.now().toString(36); while (t.length < 8) t = '0' + t;
+    var r = ''; var a = new Uint8Array(6); (window.crypto || window.msCrypto).getRandomValues(a);
+    for (var i = 0; i < a.length; i++) r += (a[i] % 36).toString(36);
+    return t + r;
+  }
+  function send(id, kind, blob) {
+    return api('?id=' + id + '&kind=' + kind, { method: 'POST', body: blob, headers: { 'content-type': 'image/jpeg' } }).then(function (r) {
+      if (r.ok) return;
+      return r.json().catch(function () { return {}; }).then(function (b) {
+        var e = new Error(b.error || 'http'); e.status = r.status; e.code = b.error; throw e;
+      });
+    });
+  }
+  function one(file) {
+    var id = newId(), preview;
+    return decode(file).then(function (src) {
+      return jpeg(src, 360, 0.8).then(function (t) { preview = t; return jpeg(src, 1600, 0.85); }).then(function (big) {
+        if (big.size > 2400000) return jpeg(src, 1280, 0.7);
+        return big;
+      }).then(function (big) { if (src.close) src.close(); return big; });
+    }).then(function (big) {
+      return send(id, 'thumb', preview).then(function () { return send(id, 'img', big); });
+    }).then(function () { grid.insertBefore(figure(id, preview), grid.firstChild); counts(); });
+  }
+  function why(e, name) {
+    if (e.code === 'full') return 'The gallery is full (300 photos). Delete some first.';
+    if (e.status === 401 || e.status === 503 || e.status === 404) return problem(e.status);
+    if (e.code === 'too-big') return name + ' is still too big after shrinking.';
+    return name + ' could not be added.';
+  }
+  $('pick').addEventListener('change', function () {
+    var files = Array.prototype.slice.call($('pick').files || []);
+    $('pick').value = '';
+    if (!files.length) return;
+    var done = 0, failed = 0, last = '';
+    (function next(i) {
+      if (i >= files.length) {
+        say(failed ? (done + ' added, ' + failed + ' failed. ' + last) : (done === 1 ? 'Added 1 photo.' : 'Added ' + done + ' photos.'), !!failed);
+        return;
+      }
+      say('Adding ' + (i + 1) + ' of ' + files.length + '…');
+      one(files[i]).then(function () { done++; }, function (e) { failed++; last = why(e, files[i].name || 'A photo'); }).then(function () { next(i + 1); });
+    })(0);
+  });
+
+  // ---- passcode
+  function connect() {
+    var p = $('pass').value.trim();
+    if (!p) return;
+    pass = p; save('nursery.photos', { pass: p });
+    refresh();
+  }
+  $('go').addEventListener('click', connect);
+  $('pass').addEventListener('keydown', function (e) { if (e.key === 'Enter') connect(); });
+  $('out').addEventListener('click', function () { drop('nursery.photos'); pass = ''; $('pass').value = ''; grid.innerHTML = ''; say(''); showLogin(); refresh(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && !$('app').hidden) refresh(); });
+
+  refresh();
+})();
+</script>
+</body>
+</html>

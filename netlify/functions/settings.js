@@ -1,10 +1,11 @@
 import { getStore } from '@netlify/blobs';
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { refuse, reply, isOpen } from '../lib/auth.js';
 
 // Shared settings for the nursery screen, so the Echo, a laptop and a phone all agree.
 //
-// - Locked by the NURSERY_PASSCODE environment variable (set it in Netlify, then redeploy).
-//   If it is not set, this refuses everyone. It is never left open.
+// - Open by default, so any device that opens the site shares the same settings with nothing to enter.
+//   Set NURSERY_PASSCODE in Netlify (then redeploy) to lock it. While it is open the Pip passcode is
+//   never stored or returned here. A locked site shares it too.
 // - Only the settings listed in RULES can be stored, and each must look right.
 // - Every setting is kept on its own, with the time the server last saw it change. Two devices saving
 //   different settings at the same moment therefore never overwrite each other, and two saving the same
@@ -12,10 +13,6 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 //   device cannot cause trouble.
 
 const MAX_BODY = 20000;
-
-const headers = { 'content-type': 'application/json', 'cache-control': 'no-store' };
-const reply = (body, status = 200) => new Response(JSON.stringify(body), { status, headers });
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const isStr = (v, max) => typeof v === 'string' && v.length <= max;
 const isNum = (v, lim) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= lim;
@@ -43,31 +40,24 @@ function readEntry(k, e) {
   return e && typeof e === 'object' && Number.isFinite(e.at) && RULES[k](e.v) ? { v: e.v, at: e.at } : null;
 }
 
-async function readAll(s) {
-  const found = await Promise.all(Object.keys(RULES).map(async (k) => [k, readEntry(k, await s.get(blobKey(k), { type: 'json' }))]));
+// What can be shared right now.
+const shared = (open) => Object.keys(RULES).filter((k) => !(open && k === 'pip.pass'));
+
+async function readAll(s, open) {
+  const found = await Promise.all(shared(open).map(async (k) => [k, readEntry(k, await s.get(blobKey(k), { type: 'json' }))]));
   const keys = {};
   for (const [k, e] of found) if (e) keys[k] = e;
   return keys;
 }
 
-// Compare through a hash so the length of the passcode is not revealed either.
-function samePasscode(given, expected) {
-  const a = createHash('sha256').update(given).digest();
-  const b = createHash('sha256').update(expected).digest();
-  return timingSafeEqual(a, b);
-}
-
 export default async (req) => {
-  const expected = process.env.NURSERY_PASSCODE || '';
-  if (!expected) return reply({ error: 'not-set-up' }, 503);
-  if (!samePasscode(req.headers.get('x-nursery-pass') || '', expected)) {
-    await sleep(500); // slows down guessing
-    return reply({ error: 'passcode' }, 401);
-  }
+  const no = await refuse(req);
+  if (no) return no;
 
   const s = store();
+  const open = isOpen();
 
-  if (req.method === 'GET') return reply({ keys: await readAll(s), now: Date.now() });
+  if (req.method === 'GET') return reply({ keys: await readAll(s, open), open, now: Date.now() });
   if (req.method !== 'POST') return reply({ error: 'method' }, 405);
 
   let body;
@@ -82,7 +72,7 @@ export default async (req) => {
   const changes = [];
   if (body && body.changes && typeof body.changes === 'object') {
     for (const [k, v] of Object.entries(body.changes)) {
-      if (Object.prototype.hasOwnProperty.call(RULES, k) && RULES[k](v)) changes.push([k, v]);
+      if (shared(open).includes(k) && RULES[k](v)) changes.push([k, v]);
     }
   }
 
@@ -92,7 +82,7 @@ export default async (req) => {
     await s.setJSON(blobKey(k), { v, at: Math.max(Date.now(), held ? held.at + 1 : 0) });
   }));
 
-  return reply({ keys: await readAll(s), now: Date.now() });
+  return reply({ keys: await readAll(s, open), open, now: Date.now() });
 };
 
 export const config = { path: '/api/settings' };
