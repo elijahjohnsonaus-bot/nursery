@@ -67,6 +67,8 @@ This copies the baby's entries, the shared settings and the photos from the Netl
 
 Photos are the only slow part. Anything added to the old site after the copy has to be added again.
 
+If the old site stays paused, a phone that still has the app open can make a backup instead: Baby, Settings, Download a backup. Then on the new site go to Baby, Settings, Restore from a backup and pick that file. It brings the entries, baby name and birthday across (not photos or the other settings), and it never overwrites a newer entry. Downloads don't work inside Fully Kiosk on the Echo, so use a phone.
+
 The calendar is read fresh on every request, so a large shared calendar is trimmed to the next two weeks before it is parsed (`trimFeed` in `netlify/lib/ical.js`), which keeps it inside the free plan's 10 ms.
 
 ## Shared settings

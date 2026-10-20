@@ -955,7 +955,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 (function () {
   'use strict';
 
-  var VERSION = '20 Oct 2026, v12';
+  var VERSION = '21 Oct 2026, v13';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -3565,7 +3565,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     sleep: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/>',
     more: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>'
   };
-  var Baby = { tab: 'today', day: Date.now(), html: '', hero: '', stale: true, sheet: false, bt: null, confirm: '', confirmTimer: null, minute: 0, press: false, late: false, pressTimer: 0, imp: { busy: false, msg: '' } };
+  var Baby = { tab: 'today', day: Date.now(), html: '', hero: '', stale: true, sheet: false, bt: null, confirm: '', confirmTimer: null, minute: 0, press: false, late: false, pressTimer: 0, imp: { busy: false, msg: '', rmsg: '' } };
   var bEl = { body: $('bBody'), name: $('bName'), age: $('bAge'), pill: $('bPill'), pillT: $('bPillT'), scrim: $('bScrim'), sheet: $('bSheet'), sheetBody: $('bSheetBody') };
 
   function bEsc(s) { return esc(s === null || s === undefined ? '' : s); }
@@ -3848,12 +3848,16 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       '<p class="b-hint">Bringing the data over only reads the old Pip and copies its entries here. It never changes or deletes anything in the old app, and it is safe to press again to catch up on anything logged there since. Keep the old Pip running until you are sure everything is here. ' +
       (imp && imp.at ? 'Last brought over ' + bEsc(dateText(new Date(imp.at)) + ' at ' + bAt(imp.at)) + ' (' + (imp.count || 0) + ' entries).' : '') + '</p>' +
       '<h2>Your data</h2><div class="b-stack"><button class="b-btn" data-b="sync">Sync now</button><button class="b-btn" data-b="export-json">Download a backup</button>' +
-      '<button class="b-btn" data-b="export-csv">Download a spreadsheet</button><button class="b-btn d" data-b="reload">Reload this device’s copy</button></div>' +
-      '<p class="b-hint">Reloading only clears what this device has already synced and fetches it again. Anything not yet sent is kept.</p></div>';
+      '<button class="b-btn" data-b="export-csv">Download a spreadsheet</button><button class="b-btn" data-b="restore"' + (Baby.imp.busy ? ' disabled' : '') + '>Restore from a backup</button>' +
+      '<button class="b-btn d" data-b="reload">Reload this device’s copy</button></div>' +
+      '<p class="b-msg" id="bRst"></p>' +
+      '<p class="b-hint">Reloading only clears what this device has already synced and fetches it again. Anything not yet sent is kept. Restoring loads a file made by Download a backup, from this site or an older one. It adds what is missing and never overwrites a newer entry.</p></div>';
   }
   function bPaintImp() {
     var n = $('bImp'), s = $('bSrc');
+    var r = $('bRst');
     if (n) setText(n, Baby.imp.msg || '');
+    if (r) setText(r, Baby.imp.rmsg || '');
     if (s) setText(s, bSrcText());
   }
 
@@ -4139,6 +4143,57 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       imp.busy = false; Baby.html = ''; pipLoad(); Baby.paint();
     });
   }
+  // ---- restoring a backup file (the one "Download a backup" makes, on this site or an older one)
+  var bRestorePick = document.createElement('input');
+  bRestorePick.type = 'file'; bRestorePick.accept = '.json,application/json'; bRestorePick.hidden = true;
+  document.body.appendChild(bRestorePick);
+  bRestorePick.addEventListener('change', function () {
+    var f = bRestorePick.files && bRestorePick.files[0];
+    bRestorePick.value = '';
+    if (f) bRestore(f);
+  });
+  function bRestore(file) {
+    var imp = Baby.imp, list = [], CH = 200, info = {};
+    if (imp.busy) return;
+    function say(t) { imp.rmsg = t; bPaintImp(); }
+    function copy(i) {
+      if (i >= list.length) return Promise.resolve();
+      return bCall('/api/sync', { method: 'POST', headers: bHdr(true), body: JSON.stringify({ since: 9007199254740991, entries: list.slice(i, i + CH) }) }, 'own').then(function () {
+        say('Copied ' + Math.min(i + CH, list.length) + ' of ' + list.length + '…');
+        return copy(i + CH);
+      });
+    }
+    imp.busy = true; imp.rmsg = 'Reading the backup…'; Baby.html = ''; Baby.paint();
+    new Promise(function (ok, no) {
+      var r = new FileReader();
+      r.onload = function () { ok(String(r.result)); };
+      r.onerror = function () { no(new Error('read')); };
+      r.readAsText(file);
+    }).then(function (text) {
+      var d = null;
+      try { d = JSON.parse(text); } catch (e) { /* not a backup */ }
+      list = d && Array.isArray(d.entries) ? d.entries.filter(function (e) { return e && typeof e.id === 'string' && typeof e.type === 'string' && +e.start; }) : [];
+      if (!list.length) { say('That file has no baby entries in it. Pick a backup made with Download a backup.'); return null; }
+      info = d;
+      say('Found ' + list.length + ' entries in the backup. Copying…');
+      return copy(0).then(function () { return bCall('/api/sync?since=0', { headers: bHdr(false) }, 'own'); }).then(function (mine) {
+        var have = {}, missing = 0, live = 0;
+        (mine.entries || []).forEach(function (e) { have[e.id] = e.updated || 0; if (!e.deleted) live++; });
+        list.forEach(function (e) { if (!(e.id in have) || have[e.id] < (e.updated || 0)) missing++; });
+        if (missing) { say(missing + ' of ' + list.length + ' entries didn’t arrive. Pick the file again.'); return null; }
+        if (typeof info.baby === 'string' && info.baby.trim() && !settings.pip.baby) settings.pip.baby = info.baby.trim().slice(0, 40);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(info.dob || '') && !settings.pip.dob) settings.pip.dob = info.dob;
+        saveSettings();
+        say('Done. All ' + list.length + ' entries from the backup are in this app (' + live + ' entries here in total). Photos and the other shared settings aren’t part of a backup, so add those again.' +
+          (pipSrc() === 'here' ? '' : ' Press “Use this app from now on” when you are ready.'));
+        return true;
+      });
+    }).catch(function (e) {
+      say(e && e.where === 'own' ? bImpWords(e) : 'Couldn’t read that file. Pick a backup made with Download a backup.');
+    }).then(function () {
+      imp.busy = false; Baby.html = ''; pipLoad(); Baby.paint();
+    });
+  }
   function bSwitch(to) {
     if (Baby.confirm !== to) {
       Baby.confirm = to; clearTimeout(Baby.confirmTimer);
@@ -4191,6 +4246,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       case 'sync': pipLoad(); toast('Syncing', false); break;
       case 'export-json': bExportJson(); break;
       case 'export-csv': bExportCsv(); break;
+      case 'restore': if (!Baby.imp.busy) bRestorePick.click(); break;
       case 'reload':
         if (Baby.confirm !== 'reload') { Baby.confirm = 'reload'; clearTimeout(Baby.confirmTimer); Baby.confirmTimer = setTimeout(function () { Baby.confirm = ''; Baby.html = ''; Baby.paint(); }, 5000); node.textContent = 'Tap again to reload'; break; }
         Baby.confirm = '';
