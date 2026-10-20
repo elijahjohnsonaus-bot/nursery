@@ -519,6 +519,8 @@ body.night .b-side.next{border-color:var(--amber)}
 .b-rwhat{font-size:.85em}
 .b-rel{font-size:1.9em; font-weight:500; line-height:1.1; font-variant-numeric:tabular-nums}
 .b-rtop .b-btn{margin-left:auto}
+.b-rbtns{margin-left:auto; display:flex; gap:.6em}
+.b-rbtns .b-btn{margin-left:0}
 .b-sw{display:flex; border-top:.1em solid var(--line)}
 .b-sw button{flex:1; padding:.8em 0; background:none; border:0; border-right:.1em solid var(--line)}
 .b-sw button:last-child{border-right:0}
@@ -931,7 +933,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 (function () {
   'use strict';
 
-  var VERSION = '20 Oct 2026, v9';
+  var VERSION = '20 Oct 2026, v10';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -1976,6 +1978,47 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var s = Math.max(0, Math.floor(ms / 1000)), m = Math.floor(s / 60), r = s % 60;
     return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r;
   }
+  // ---- a breast feed's clock. The side timers only run while the baby is feeding, and Pause stops them.
+  function feedActive(e, ms) {
+    return (e.leftMs || 0) + (e.rightMs || 0) + (e.running && e.sideStart ? Math.max(0, ms - e.sideStart) : 0);
+  }
+  // Put the time the running side has had into that side's total.
+  function feedBank(x, now) {
+    if (!x.sideStart) return;
+    var spent = Math.max(0, now - x.sideStart);
+    if (x.side === 'left') x.leftMs = (x.leftMs || 0) + spent;
+    if (x.side === 'right') x.rightMs = (x.rightMs || 0) + spent;
+    x.sideStart = null;
+  }
+  function feedPause(x, now) {
+    feedBank(x, now);
+    x.paused = true; x.pausedAt = now;
+    if (x.pauseMs === undefined) x.pauseMs = 0;
+  }
+  function feedResume(x, side, now) {
+    if (x.paused && x.pausedAt) x.pauseMs = (x.pauseMs || 0) + Math.max(0, now - x.pausedAt);
+    else if (x.pauseMs === undefined) x.pauseMs = 0;
+    x.paused = false; x.pausedAt = null;
+    x.side = side || x.side; x.lastSide = x.side; x.sideStart = now;
+  }
+  // Finishing a paused feed ends it when the baby stopped (the pause), not when Finish was tapped.
+  function feedFinish(x, now) {
+    var at = x.paused && x.pausedAt ? x.pausedAt : now;
+    feedBank(x, now);
+    x.end = at; x.running = false; x.paused = false; x.pausedAt = null;
+    if (x.pauseMs === undefined) x.pauseMs = 0;
+  }
+  // When the baby last stopped feeding. This is what "since last feed" counts from.
+  function feedEnded(e) {
+    if (e.running) return e.paused && e.pausedAt ? e.pausedAt : Date.now();
+    if (e.type === 'breast' && e.end && e.pauseMs === undefined) {
+      // A feed saved before Pause existed. Its side timers only ever ran while the baby was feeding, so if they add
+      // up to far less than start to finish, the feed was over when the timers stopped and was closed late.
+      var on = (e.leftMs || 0) + (e.rightMs || 0);
+      if (on > 0 && e.end - e.start - on > 10 * MIN) return e.start + on;
+    }
+    return e.end || e.start;
+  }
   function feedWord(e) {
     var at = clockText(new Date(e.start));
     if (e.type === 'bottle') return 'Bottle at ' + at + (e.ml ? ' · ' + e.ml + ' mL' : '');
@@ -1997,16 +2040,17 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var v = { stale: stale, run: !!s.runFeed, side: null, pills: null, sleep: null };
     if (s.runFeed) {
       var f = s.runFeed;
-      v.main = { k: 'Feeding now' + tail, v: pclock(ms - f.start), s: 'Started ' + clockText(new Date(f.start)) };
+      v.main = { k: (f.paused ? 'Paused' : 'Feeding now') + tail, v: pclock(ms - f.start), s: 'Started ' + clockText(new Date(f.start)) };
       if (f.type === 'breast') {
         var l = (f.leftMs || 0) + (f.side === 'left' && f.sideStart ? ms - f.sideStart : 0);
         var r = (f.rightMs || 0) + (f.side === 'right' && f.sideStart ? ms - f.sideStart : 0);
+        v.main.v = pclock(l + r);
         v.main.s = 'Left ' + pclock(l) + ' · Right ' + pclock(r);
-        v.side = { k: 'Now on', v: f.side === 'right' ? 'Right' : 'Left', s: '' };
+        v.side = { k: f.paused ? 'Paused on' : 'Now on', v: f.side === 'right' ? 'Right' : 'Left', s: '' };
         v.pills = [{ t: 'Left ' + pclock(l), on: f.side !== 'right' }, { t: 'Right ' + pclock(r), on: f.side === 'right' }];
       }
     } else if (s.feed) {
-      v.main = { k: 'Since last feed' + tail, v: pdur(ms - (s.feed.end || s.feed.start)), s: feedWord(s.feed) };
+      v.main = { k: 'Since last feed' + tail, v: pdur(ms - feedEnded(s.feed)), s: feedWord(s.feed) };
       if (s.next) {
         v.side = { k: 'Next side', v: s.next === 'left' ? 'Left' : 'Right', s: 'Last was ' + (s.next === 'left' ? 'right' : 'left') };
         v.pills = [{ t: s.next === 'left' ? 'Left next' : 'Left last', on: s.next === 'left' },
@@ -2162,7 +2206,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       if (pipLive('breast')) { toast('A feed is already running', false); refresh(); return; }
       var now = Date.now(), made;
       doLog(function (a) {
-        made = a.add('breast', { start: now, side: side, lastSide: side, sideStart: now, leftMs: 0, rightMs: 0, running: true, end: null });
+        made = a.add('breast', { start: now, side: side, lastSide: side, sideStart: now, leftMs: 0, rightMs: 0, pauseMs: 0, running: true, end: null });
         return 'Feeding, ' + side + ' side';
       });
       pip.seenRun = made.id;
@@ -2175,16 +2219,26 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (!logReady()) return;
     fresh(function () {
       var e = pipLive('breast');
-      if (!e || e.side === side) return;
-      var now = Date.now();
+      if (!e || (e.side === side && !e.paused)) return;
+      var now = Date.now(), was = !!e.paused;
       doLog(function (a) {
         a.edit(e, function (x) {
-          var spent = now - (x.sideStart || now);
-          if (x.side === 'left') x.leftMs = (x.leftMs || 0) + spent;
-          if (x.side === 'right') x.rightMs = (x.rightMs || 0) + spent;
-          x.side = side; x.lastSide = side; x.sideStart = now;
+          if (x.paused) feedResume(x, side, now);     // a tap on a side while paused carries on from there
+          else { feedBank(x, now); x.side = side; x.lastSide = side; x.sideStart = now; }
         });
-        return 'Switched to ' + side;
+        return was ? 'Back on, ' + side + ' side' : 'Switched to ' + side;
+      });
+    });
+  }
+  function pauseFeed() {
+    if (!logReady()) return;
+    fresh(function () {
+      var e = pipLive('breast');
+      if (!e) return;
+      var now = Date.now(), was = !!e.paused;
+      doLog(function (a) {
+        a.edit(e, function (x) { if (x.paused) feedResume(x, x.side, now); else feedPause(x, now); });
+        return was ? 'Back on, ' + e.side + ' side' : 'Paused';
       });
     });
   }
@@ -2195,14 +2249,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       if (!e) return;
       var now = Date.now();
       doLog(function (a) {
-        a.edit(e, function (x) {
-          if (x.sideStart) {
-            var spent = now - x.sideStart;
-            if (x.side === 'left') x.leftMs = (x.leftMs || 0) + spent;
-            if (x.side === 'right') x.rightMs = (x.rightMs || 0) + spent;
-          }
-          x.sideStart = null; x.end = now; x.running = false;
-        });
+        a.edit(e, function (x) { feedFinish(x, now); });
         return 'Feed saved, ' + pdur((e.leftMs || 0) + (e.rightMs || 0));
       });
     });
@@ -2261,7 +2308,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var d;
     switch (e.type) {
       case 'breast':
-        d = e.running ? 'feeding now' : pdur((e.leftMs || 0) + (e.rightMs || 0)) +
+        d = e.running ? (e.paused ? 'paused' : 'feeding now') : pdur((e.leftMs || 0) + (e.rightMs || 0)) +
           (e.leftMs ? ' · L ' + pdur(e.leftMs) : '') + (e.rightMs ? ' · R ' + pdur(e.rightMs) : '');
         return { t: 'Breast feed', d: d };
       case 'bottle':
@@ -2333,16 +2380,17 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
           : pip.status === 'address' ? 'No Pip found at that address. Check it in Settings.'
           : 'Waiting for Pip to answer before logging, so a feed already running on a phone isn’t missed.') + '</p>';
       }
-      if (run) h += '<p class="lg-k">Feeding now <b id="lg-run"></b></p>';
+      if (run) h += '<p class="lg-k">' + (run.paused ? 'Paused' : 'Feeding now') + ' <b id="lg-run"></b></p>';
       ['left', 'right'].forEach(function (side) {
         var cur = run && run.side === side, w = side === 'left' ? 'Left' : 'Right';
         if (side === 'left') h += '<div class="lg-row">';
         h += '<button class="lg-tile big' + (cur ? ' on' : '') + (!run && next === side ? ' next' : '') + '" data-lg="side" data-v="' + side + '"' + dis + '>' + w +
-          '<small>' + (run ? (cur ? 'Now on · <span id="lg-t' + side[0] + '"></span>' : 'Switch · <span id="lg-t' + side[0] + '"></span>')
+          '<small>' + (run ? (cur ? (run.paused ? 'Paused · ' : 'Now on · ') + '<span id="lg-t' + side[0] + '"></span>' : 'Switch · <span id="lg-t' + side[0] + '"></span>')
             : (next === side ? 'Next side' : 'Start')) + '</small></button>';
         if (side === 'right') h += '</div>';
       });
-      if (run) h += '<div class="lg-row"><button class="lg-tile solid" data-lg="stop"' + dis + '>Stop feed</button></div>';
+      if (run) h += '<div class="lg-row"><button class="lg-tile' + (run.paused ? ' on' : '') + '" data-lg="pause"' + dis + '>' + (run.paused ? 'Resume' : 'Pause') + '</button>' +
+        '<button class="lg-tile solid" data-lg="stop"' + dis + '>Stop feed</button></div>';
       h += '<div class="lg-row four">' +
         '<button class="lg-tile" data-lg="view" data-v="bottle"' + dis + '>Bottle<small>Log one</small></button>' +
         '<button class="lg-tile" data-lg="view" data-v="nappy"' + dis + '>Nappy<small>Log one</small></button>' +
@@ -2395,7 +2443,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       var now = Date.now(), run = pipLive('breast'), sleep = pipLive('sleep'), pump = pipLive('pump');
       function put(id, t) { var n = $(id); if (n) setText(n, t); }
       if (run) {
-        put('lg-run', pclock(now - run.start));
+        put('lg-run', pclock(feedActive(run, now)));
         put('lg-tl', pclock((run.leftMs || 0) + (run.side === 'left' && run.sideStart ? now - run.sideStart : 0)));
         put('lg-tr', pclock((run.rightMs || 0) + (run.side === 'right' && run.sideStart ? now - run.sideStart : 0)));
       }
@@ -2411,6 +2459,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var a = b.getAttribute('data-lg'), v = b.getAttribute('data-v'), k = b.getAttribute('data-k');
     if (a === 'done') { Log.close(); return; }
     if (a === 'side') { var run = pipLive('breast'); if (run) switchSide(v); else startBreast(v); return; }
+    if (a === 'pause') { pauseFeed(); return; }
     if (a === 'stop') { stopFeed(); return; }
     if (a === 'sleep') { toggleSleep(); return; }
     if (a === 'pump') { startPump(); return; }
@@ -2465,7 +2514,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     // Big buttons under the timer: start or switch a side, stop, or log a nappy, bottle or sleep.
     paintAct: function (v, ready) {
       var box = $('f-act'), run = ready && !v.msg ? pipLive('breast') : null, sleep = ready ? pipLive('sleep') : null;
-      var key = !ready || v.msg ? 'off' : run ? 'run|' + run.id + '|' + run.side : 'idle|' + nextSideNow() + '|' + (sleep ? 1 : 0);
+      var key = !ready || v.msg ? 'off' : run ? 'run|' + run.id + '|' + run.side + '|' + (run.paused ? 1 : 0) : 'idle|' + nextSideNow() + '|' + (sleep ? 1 : 0);
       if (key !== this.actKey) {
         this.actKey = key;
         var h = '';
@@ -2476,7 +2525,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
             h += '<button class="fa' + (run && run.side === side ? ' cur' : '') + (!run && next === side ? ' next' : '') + '" data-fa="side" data-v="' + side + '">' + w +
               '<small>' + (run ? '<span id="fa-t' + side[0] + '"></span>' : (next === side ? 'Next' : '&nbsp;')) + '</small></button>';
           });
-          if (run) h += '<button class="fa stop" data-fa="stop">Stop feed<small>&nbsp;</small></button>';
+          if (run) h += '<button class="fa' + (run.paused ? ' cur' : '') + '" data-fa="pause">' + (run.paused ? 'Resume' : 'Pause') + '<small>&nbsp;</small></button>' +
+            '<button class="fa stop" data-fa="stop">Stop feed<small>&nbsp;</small></button>';
           else h += '<button class="fa" data-fa="nappy">Nappy<small>&nbsp;</small></button>' +
             '<button class="fa" data-fa="bottle">Bottle<small>&nbsp;</small></button>' +
             '<button class="fa' + (sleep ? ' cur' : '') + '" data-fa="sleep">' + (sleep ? 'End sleep' : 'Sleep') + '<small>' + (sleep ? '<span id="fa-sl"></span>' : '&nbsp;') + '</small></button>';
@@ -2498,6 +2548,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (!b) { Feed.close(); return; }          // anywhere else goes back
     var a = b.getAttribute('data-fa'), v = b.getAttribute('data-v');
     if (a === 'side') { if (pipLive('breast')) switchSide(v); else startBreast(v); }
+    else if (a === 'pause') pauseFeed();
     else if (a === 'stop') stopFeed();
     else if (a === 'nappy') Log.open('nappy');
     else if (a === 'bottle') Log.open('bottle');
@@ -3443,7 +3494,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     return DAYS[x.getDay()] + ' ' + x.getDate() + ' ' + MONTHS[x.getMonth()];
   }
   function bInput(ms) { var d = new Date(ms); return d.getFullYear() + '-' + bPad(d.getMonth() + 1) + '-' + bPad(d.getDate()) + 'T' + bPad(d.getHours()) + ':' + bPad(d.getMinutes()); }
-  function bEnd(e) { return e.end || (e.running ? Date.now() : e.start); }
+  function bEnd(e) { return e.type === 'breast' ? feedEnded(e) : (e.end || (e.running ? Date.now() : e.start)); }
   function bTypeIs(t) { return function (e) { return e.type === t; }; }
 
   // ---- numbers
@@ -3491,7 +3542,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var bits, tot;
     switch (e.type) {
       case 'breast':
-        if (e.running) return { t: 'Breast feed', d: 'feeding now' };
+        if (e.running) return { t: 'Breast feed', d: e.paused ? 'paused' : 'feeding now' };
         bits = [pdur((e.leftMs || 0) + (e.rightMs || 0))];
         if (e.leftMs) bits.push('L ' + pdur(e.leftMs));
         if (e.rightMs) bits.push('R ' + pdur(e.rightMs));
@@ -3521,7 +3572,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   function bRow(e) {
     var d = bDesc(e);
     return '<li><button class="b-ti" data-t="' + bEsc(e.type) + '" data-b="edit" data-v="' + bEsc(e.id) + '"><span class="b-tt">' + bAt(e.start) + '</span><span class="b-tb"><b>' + bEsc(d.t) + '</b>' +
-      (e.running ? '<span class="b-live">live</span>' : '') + (d.d ? '<small>' + bEsc(d.d) + '</small>' : '') + (e.by ? '<small>' + bEsc(e.by) + '</small>' : '') + '</span></button></li>';
+      (e.running ? '<span class="b-live">' + (e.paused ? 'paused' : 'live') + '</span>' : '') + (d.d ? '<small>' + bEsc(d.d) + '</small>' : '') + (e.by ? '<small>' + bEsc(e.by) + '</small>' : '') + '</span></button></li>';
   }
 
   // ---- header: name, age, and whether the entries are reaching the server
@@ -3547,8 +3598,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var s = pipStats(now), f = s.feed;
     if (!f) return '<p class="b-hl">No feeds yet</p><p class="b-ht none">–</p><p class="b-hs">Tap Breast or Bottle below to start.</p>';
     var since = now - bEnd(f), h = Math.floor(since / HOUR), m = Math.floor((since % HOUR) / MIN), d = bDesc(f);
-    var t = f.running ? pclock(now - f.start) : (h ? h + '<small>h</small> ' + bPad(m) + '<small>m</small>' : m + '<small>m</small>');
-    var out = '<p class="b-hl">' + (f.running ? 'Feeding now' : 'Since last feed') + '</p><p class="b-ht">' + t + '</p><p class="b-hs">' +
+    var t = f.running ? pclock(f.type === 'breast' ? feedActive(f, now) : now - f.start) : (h ? h + '<small>h</small> ' + bPad(m) + '<small>m</small>' : m + '<small>m</small>');
+    var out = '<p class="b-hl">' + (f.running ? (f.paused ? 'Paused' : 'Feeding now') : 'Since last feed') + '</p><p class="b-ht">' + t + '</p><p class="b-hs">' +
       bEsc(f.running ? d.t + ' · started ' + bAt(f.start) : d.t + ' at ' + bAt(f.start) + (d.d ? ' · ' + d.d : '')) + '</p>';
     if (s.next && !f.running) {
       out += '<div class="b-sides">' + ['left', 'right'].map(function (x) {
@@ -3567,8 +3618,9 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var h = '';
     pipList().filter(function (e) { return e.running; }).forEach(function (e) {
       var id = bEsc(e.id);
-      h += '<div class="b-run"><div class="b-rtop"><div><p class="b-rwhat">' + bEsc(BNAMES[e.type] || e.type) + ' · started ' + bAt(e.start) + '</p><p class="b-rel" data-el="' + id + '"></p></div>' +
-        '<button class="b-btn p" data-b="finish" data-v="' + id + '">Finish</button></div>';
+      h += '<div class="b-run"><div class="b-rtop"><div><p class="b-rwhat">' + bEsc(BNAMES[e.type] || e.type) + ' · started ' + bAt(e.start) + (e.paused ? ' · paused' : '') + '</p><p class="b-rel" data-el="' + id + '"></p></div>' +
+        '<div class="b-rbtns">' + (e.type === 'breast' ? '<button class="b-btn" data-b="pause" data-v="' + id + '">' + (e.paused ? 'Resume' : 'Pause') + '</button>' : '') +
+        '<button class="b-btn p" data-b="finish" data-v="' + id + '">Finish</button></div></div>';
       if (e.type === 'breast') {
         h += '<div class="b-sw">' + ['left', 'right'].map(function (x) {
           return '<button data-b="side" data-v="' + x + '" aria-pressed="' + (e.side === x) + '">' + (x === 'left' ? 'Left' : 'Right') + '<span data-sd="' + id + x + '"></span></button>';
@@ -3583,7 +3635,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var now = Date.now(), nodes = bEl.body.querySelectorAll('[data-el],[data-sd]'), i;
     for (i = 0; i < nodes.length; i++) {
       var a = nodes[i].getAttribute('data-el'), e, side;
-      if (a !== null) { e = pip.entries[a]; if (e) setText(nodes[i], pclock(now - e.start)); continue; }
+      if (a !== null) { e = pip.entries[a]; if (e) setText(nodes[i], pclock(e.type === 'breast' ? feedActive(e, now) : now - e.start)); continue; }
       a = nodes[i].getAttribute('data-sd');
       side = a.slice(-5) === 'right' ? 'right' : 'left';
       e = pip.entries[a.slice(0, a.length - side.length)];
@@ -3829,7 +3881,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var d = bDesc(e), endEdit = (e.type === 'breast' || e.type === 'sleep' || e.type === 'pump') && e.end;
     Baby.bt = { id: id };
     bOpenSheet('<h3>' + bEsc(d.t) + '</h3><p class="b-hint">' + bEsc(d.d) + (e.by ? ' · logged by ' + bEsc(e.by) : '') + '</p>' + bTimeField('bTime', e.start, 'Started') +
-      (endEdit ? bTimeField('bEnd', e.end, 'Finished') : '') +
+      (endEdit ? bTimeField('bEnd', e.type === 'breast' ? feedEnded(e) : e.end, 'Finished') : '') +
       (e.type === 'bottle' ? '<div class="b-field"><label for="beMl">Amount (mL)</label><input class="b-in" id="beMl" type="number" inputmode="numeric" value="' + (e.ml || 0) + '"></div>' : '') +
       (e.type === 'nappy' ? '<div class="b-chips"><button class="b-chip" data-b="nappy-edit" data-v="wet" aria-pressed="' + (!!e.wet && !e.dirty) + '">Wet</button><button class="b-chip" data-b="nappy-edit" data-v="dirty" aria-pressed="' + (!!e.dirty && !e.wet) + '">Dirty</button>' +
         '<button class="b-chip" data-b="nappy-edit" data-v="both" aria-pressed="' + (!!e.dirty && !!e.wet) + '">Both</button></div>' : '') +
@@ -3869,13 +3921,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       if (!e || e.deleted || !e.running) return;
       doLog(function (a) {
         a.edit(e, function (x) {
-          if (x.type === 'breast' && x.sideStart) {
-            var spent = now - x.sideStart;
-            if (x.side === 'left') x.leftMs = (x.leftMs || 0) + spent;
-            if (x.side === 'right') x.rightMs = (x.rightMs || 0) + spent;
-            x.sideStart = null;
-          }
-          x.end = now; x.running = false;
+          if (x.type === 'breast') feedFinish(x, now);
+          else { x.end = now; x.running = false; }
         });
         return e.type === 'breast' ? 'Feed saved, ' + pdur((e.leftMs || 0) + (e.rightMs || 0)) : (BNAMES[e.type] || 'Entry') + ' saved, ' + pdur(now - e.start);
       });
@@ -3901,7 +3948,11 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     doLog(function (a) {
       a.edit(e, function (x) {
         if (isFinite(s)) x.start = s;
-        if (isFinite(en) && en >= x.start) x.end = en;
+        if (isFinite(en) && en >= x.start) {
+          // An end time the person has looked at and saved is theirs: the old-feed correction no longer applies to it.
+          if (x.type === 'breast' && x.pauseMs === undefined && Math.floor(en / MIN) !== Math.floor((x.end || 0) / MIN)) x.pauseMs = 0;
+          x.end = en;
+        }
         if (ml !== null) x.ml = ml;
         if (text !== null) x.text = text;
         if (name !== null && name) x.name = name;
@@ -4021,6 +4072,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       case 'more': if (bReady()) bMoreSheet(); break;
       case 'sleep': if (bReady()) toggleSleep(); break;
       case 'pump': { if (!bReady()) break; var p = pipLive('pump'); if (p) bFinish(p.id); else startPump(); break; }
+      case 'pause': if (bReady()) pauseFeed(); break;
       case 'finish': bFinish(v); break;
       case 'side': if (bReady()) switchSide(v); break;
       case 'edit': bEditSheet(v); break;

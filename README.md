@@ -133,6 +133,7 @@ The old address and passcode are kept out of this repo, like everything else pri
 Tap the baby strip on Home or the nursery screen, or the Log button, to open the Log screen (or use the Baby page above):
 
 - **Left / Right**: start a feed (the suggested side is marked Next). While a feed runs, the other side switches, and Stop feed saves it.
+- **Pause**: stops the timers while the baby comes off (a burp, a nappy change) and **Resume** carries on. Tapping a side while paused resumes on that side. Stopping a paused feed ends it at the moment you paused, so "since last feed" is right even if Stop is tapped later. Pause is on the Log screen, the night feed screen and the Baby page.
 - **Bottle**: amount, expressed or formula, and when (now or up to an hour ago).
 - **Nappy**: wet, dirty or both, and when.
 - **Sleep** and **Pump**: start and stop. Stopping a pump asks for the amounts.
@@ -140,6 +141,8 @@ Tap the baby strip on Home or the nursery screen, or the Log button, to open the
 - Every log shows a message with **Undo** for 8 seconds.
 
 On the night feed screen the same feed, nappy, bottle and sleep buttons are under the timer, in dim red.
+
+**Since last feed** counts from when the baby last stopped feeding, not from when Stop was tapped. A feed saved before Pause existed whose side timers add up to far less than its start to finish (for example 16 minutes on the breast but closed an hour later) is counted from the end of the timers. Open the feed on the Baby page and save it to set the finish time yourself.
 
 The Echo logs under the name set in Settings (default "Nursery screen"). Before changing a feed that is already running, the screen checks the server first, so a change made on a phone a moment ago is not overwritten. Logging can be switched off in Settings.
 
