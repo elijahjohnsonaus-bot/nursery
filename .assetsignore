@@ -13,3 +13,5 @@ wrangler.jsonc
 package.json
 package-lock.json
 README.md
+bun.lock
+bun.lockb
