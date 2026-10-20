@@ -41,6 +41,10 @@ export const RULES = {
   'pip.wet': (v) => Number.isInteger(v) && v >= 0 && v <= 20,
   'pip.dirty': (v) => Number.isInteger(v) && v >= 0 && v <= 20,
   'pip.guide': (v) => typeof v === 'boolean',
+  // Next feed: minutes between feeds by day, the longer gap after the last feed before nightAt, and nightAt.
+  'pip.gapDay': (v) => Number.isInteger(v) && v >= 30 && v <= 720,
+  'pip.gapNight': (v) => Number.isInteger(v) && v >= 30 && v <= 720,
+  'pip.nightAt': (v) => typeof v === 'string' && HHMM.test(v),
 };
 
 const blobKey = (k) => 'k/' + k;

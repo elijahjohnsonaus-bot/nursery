@@ -254,6 +254,8 @@ body.has-pip .pip{display:flex}
 .pip .v.big{font-size:5.4vmin; font-weight:600; line-height:1.05; margin-top:.3vmin}
 .pip .item.msg .v.big{font-size:3.6vmin; line-height:1.2}
 .pip.stale .item:not(.main) .v{opacity:.55}
+.gapval{font-size:4.2vmin; font-weight:600; min-width:24vmin; text-align:center; margin:0 1.6vmin}
+#feedSet .lbl{min-width:27vmin}
 @media (min-aspect-ratio: 101/100){
   body.has-pip .stage{grid-template-rows:auto minmax(0,1fr) auto auto auto;
     grid-template-areas:"top top" "reading outfit" "pip pip" "strip strip" "tip tip"; row-gap:1.8vmin}
@@ -279,6 +281,9 @@ body.has-pip .pip{display:flex}
 .feed-side.next{border-color:#C8402A; color:#C8402A; font-weight:600}
 .feed-foot{display:flex; justify-content:space-between; font-size:3.4vmin; color:#A02A1A}
 .feed-hint{font-size:2.4vmin; margin-top:1.6vmin; color:#5A180E}
+.feed-next{font-size:4.4vmin; font-weight:500; margin-top:1.2vmin; color:#C8402A}
+.feed-next:empty{display:none}
+.feed-next.due{font-weight:700}
 
 /* ---------- logging to Pip: big-button Log screen, night feed buttons, undo toast ---------- */
 .logscr{position:fixed; top:0; right:0; bottom:0; left:0; z-index:28; display:none; background:var(--panel); color:var(--ink)}
@@ -453,14 +458,14 @@ body.night .dots .dot.on{opacity:.45}
   .tonight .head, .tl-group, .tl-t{font-size:3.2vmin} .tl-hour{font-size:3vmin} .tl{--barmax:12vmin}
   .tip{font-size:4vmin}
   .controls{flex-wrap:wrap} .controls .btn{margin:1vmin; min-width:40vmin; font-size:4.4vmin}
-  .btn{font-size:4.4vmin} .chip{font-size:4vmin} .lbl{font-size:4vmin} .hint{font-size:3.8vmin}
+  .btn{font-size:4.4vmin} .gapval{font-size:4.8vmin} .chip{font-size:4vmin} .lbl{font-size:4vmin} .hint{font-size:3.8vmin}
   .panel-head h2{font-size:7.5vmin} .panel h3{font-size:4.8vmin}
   .pgrid{grid-template-columns:repeat(auto-fill,minmax(22vmin,1fr))} .pfig button{min-width:11vmin; min-height:11vmin; font-size:4.2vmin} #photoCount{font-size:3.8vmin} .pempty{font-size:3.8vmin}
   .sound{width:calc(50% - 1.6vmin)} .sound b{font-size:4.6vmin} .sound span{font-size:3.6vmin}
   input[type=text], input[type=password]{width:100%; margin-bottom:2vmin} input[type=range]{width:100%}
   body.has-pip .stage{grid-template-rows:auto; grid-template-areas:"top" "reading" "outfit" "pip" "strip" "tip"}
   .pip .item.main{flex:1 1 100%} .pip .v.big{font-size:10vmin} .pip .item.msg .v.big{font-size:6vmin}
-  .feed-top{font-size:4.4vmin} .feed-clock{font-size:6vmin} .feed-k, .feed-s, .feed-side{font-size:5vmin} .feed-v{font-size:19vmin}
+  .feed-top{font-size:4.4vmin} .feed-clock{font-size:6vmin} .feed-k, .feed-s, .feed-side, .feed-next{font-size:5vmin} .feed-v{font-size:19vmin}
   .logp-cols{display:block}
   .logp-head h2{font-size:7.5vmin} .logp-sync{display:block; margin:.8vmin 0 0; font-size:3.6vmin}
   .lg-k{font-size:4.4vmin} .lg-k b{font-size:5vmin}
@@ -507,6 +512,12 @@ body.night .b-tab[aria-current="page"]{background:var(--amber); border-color:var
 .b-ht.none{opacity:.3}
 .b-ht small{font-size:.38em; font-weight:400; margin-left:.05em; color:var(--ink-soft)}
 .b-hs{font-size:.9em; min-height:1.4em}
+.b-nx{font-size:.95em; margin-top:.35em}
+.b-nx b{font-weight:600}
+.b-nx.due, .b-nx.due b{color:var(--bad)}
+.b-gap{display:flex; align-items:center; gap:.8em; max-width:24em}
+.b-gap .b-sq{width:2.6em; height:2.6em}
+.b-gv{flex:1; text-align:center; font-weight:600; font-size:1.15em}
 .b-sides{display:flex; gap:.5em; justify-content:center; margin-top:.7em}
 .b-side{min-width:5.2em; padding:.3em .9em; border:.12em solid var(--line); border-radius:999px; text-align:center; color:var(--ink-soft); font-size:.85em}
 .b-side b{display:block; font-size:1.3em; color:var(--ink)}
@@ -661,6 +672,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     </div>
     <section class="today h-pip" id="hPip" aria-label="Baby">
       <div class="item main" id="hp-main"><p class="k" id="hp-k">Since last feed</p><p class="v big" id="hp-v"></p><p class="s" id="hp-s"></p></div>
+      <div class="item" id="hp-in"><p class="k" id="hp-kn">Next feed</p><p class="v" id="hp-vn"></p><p class="s" id="hp-sn"></p></div>
       <div class="item" id="hp-i2"><p class="k" id="hp-k2">Next side</p><p class="v" id="hp-v2"></p><p class="s" id="hp-s2"></p></div>
       <div class="item" id="hp-i3"><p class="k">Last 24 hours</p><p class="v" id="hp-v3"></p><p class="s" id="hp-s3"></p></div>
       <div class="item" id="hp-i4"><p class="k" id="hp-k4">Sleep</p><p class="v" id="hp-v4"></p><p class="s" id="hp-s4"></p></div>
@@ -698,6 +710,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 
   <section class="today pip" id="pip" aria-label="Pip">
     <div class="item main" id="p-main"><p class="k" id="p-k">Since last feed</p><p class="v big" id="p-v"></p><p class="s" id="p-s"></p></div>
+    <div class="item" id="p-in"><p class="k" id="p-kn">Next feed</p><p class="v" id="p-vn"></p><p class="s" id="p-sn"></p></div>
     <div class="item" id="p-i2"><p class="k" id="p-k2">Next side</p><p class="v" id="p-v2"></p><p class="s" id="p-s2"></p></div>
     <div class="item" id="p-i3"><p class="k">Last 24 hours</p><p class="v" id="p-v3"></p><p class="s" id="p-s3"></p></div>
     <div class="item" id="p-i4"><p class="k" id="p-k4">Sleep</p><p class="v" id="p-v4"></p><p class="s" id="p-s4"></p></div>
@@ -778,6 +791,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       <p class="feed-k" id="f-k"></p>
       <p class="feed-v" id="f-v"></p>
       <p class="feed-s" id="f-s"></p>
+      <p class="feed-next" id="f-next"></p>
       <div class="feed-sides" id="f-sides"></div>
     </div>
     <div class="feed-act" id="f-act"></div>
@@ -903,6 +917,14 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       <div class="row"><span class="lbl">From</span><input type="time" id="nightFrom" aria-label="Night look starts"><span class="lbl">until</span><input type="time" id="nightTo" aria-label="Night look ends"></div>
     </div>
 
+    <div class="set" id="feedSet">
+      <h3>Next feed</h3>
+      <p class="hint">Feeds are timed from when they start, so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. The last feed before the time below is followed by the night gap instead, and feeds after that go back to the day gap. Shown on the nursery and Home screens, the night feed screen and the Baby page.</p>
+      <div class="row"><span class="lbl">Day gap</span><button class="btn" data-gap="gapDay" data-d="-15" aria-label="Shorter">&minus;</button><span class="gapval" id="gapDayV"></span><button class="btn" data-gap="gapDay" data-d="15" aria-label="Longer">+</button></div>
+      <div class="row"><span class="lbl">Night gap</span><button class="btn" data-gap="gapNight" data-d="-15" aria-label="Shorter">&minus;</button><span class="gapval" id="gapNightV"></span><button class="btn" data-gap="gapNight" data-d="15" aria-label="Longer">+</button></div>
+      <div class="row"><span class="lbl">Last feed before</span><input type="time" id="nightAt" aria-label="The night gap follows the last feed before this time"><span class="muted">is followed by the night gap</span></div>
+    </div>
+
     <div class="set" id="photoSet">
       <h3>Photos</h3>
       <p class="hint">The photos for the Home slideshow, which keeps going in its corner all day so the time, weather and calendar stay on screen. Tap it for full screen, or use Family, Photo frame. Every photo is shrunk before it is saved, and its location and camera details are dropped.</p>
@@ -933,7 +955,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 (function () {
   'use strict';
 
-  var VERSION = '20 Oct 2026, v10';
+  var VERSION = '20 Oct 2026, v11';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -979,7 +1001,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     bags: { '0.2': true, '1.0': true, '2.5': true, '3.5': true },
     sound: { type: 'brown', volume: 30, timer: '60' },
     light: { colour: 'amber', level: 45, off: '30' },
-    pip: { host: '', pass: '', dob: '', auto: false, log: true, by: 'Nursery screen', src: '', baby: '', wet: 6, dirty: 2, guide: true }
+    pip: { host: '', pass: '', dob: '', auto: false, log: true, by: 'Nursery screen', src: '', baby: '', wet: 6, dirty: 2, guide: true,
+      gapDay: 180, gapNight: 240, nightAt: '00:00' }   // next feed: minutes between feeds by day, the longer gap after the last feed before nightAt
   };
   function withDefaults(s) {
     var out = JSON.parse(JSON.stringify(DEFAULTS));
@@ -1726,6 +1749,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   function syncSettings() {
     setText(el.placeName, 'Using ' + settings.place.name + '.');
     el.nightFrom.value = settings.nightFrom; el.nightTo.value = settings.nightTo;
+    setText($('gapDayV'), gapText(gapSetting('gapDay'))); setText($('gapNightV'), gapText(gapSetting('gapNight'))); $('nightAt').value = nightAtText();
     var chips = el.settings.querySelectorAll('[data-bag]');
     for (var i = 0; i < chips.length; i++) chips[i].classList.toggle('on', !!settings.bags[chips[i].getAttribute('data-bag')]);
     var schips = el.settings.querySelectorAll('[data-slide]');
@@ -1758,6 +1782,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       for (var x in settings.bags) if (settings.bags[x]) count++;
       if (!(settings.bags[k] && count === 1)) settings.bags[k] = !settings.bags[k];
       drawnKey = ''; tlKey = '';
+    } else if (b.hasAttribute('data-gap')) { gapStep(b.getAttribute('data-gap'), +b.getAttribute('data-d') || 0); refresh();
     } else if (b.id === 'syncSave') { syncConnect(); return; }
     else if (b.id === 'syncOff') { syncDisconnect(); return; }
     else if (b.id === 'pipSave') { pipConnect(); return; }
@@ -1799,6 +1824,9 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   }
   el.nightFrom.addEventListener('change', onTime);
   el.nightTo.addEventListener('change', onTime);
+  $('nightAt').addEventListener('change', function () {
+    if (timeOk(this.value)) { settings.pip.nightAt = this.value; saveSettings(); refresh(); } else syncSettings();
+  });
 
   // ---------- Pip: last feed, next side, nappies, sleep, and logging ----------
   // Talks to Pip's own sync address. The address and passcode are typed into Settings on this
@@ -2026,6 +2054,42 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     return 'Breast feed at ' + at + (total ? ' · ' + pdur(total) : '');
   }
 
+  // ---- when the next feed is due
+  // Feeds are timed from the START of the last one: a feed that starts at 3:00 pm is followed by one at 6:00 pm (a 3 hour
+  // gap) even if it runs until 3:30 pm. The last feed before the night time (12:00 am to begin with) gets the longer night
+  // gap instead, so the first stretch of the night can be longer. Feeds after that go back to the day gap.
+  function timeOk(v) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(v); }
+  function gapSetting(k) {
+    var v = settings.pip[k];
+    return typeof v === 'number' && v >= 30 && v <= 720 ? Math.round(v) : DEFAULTS.pip[k];
+  }
+  function nightAtText() { return timeOk(settings.pip.nightAt) ? settings.pip.nightAt : DEFAULTS.pip.nightAt; }
+  function gapText(m) {
+    var h = Math.floor(m / 60), r = m % 60;
+    return h ? h + (r ? ' h ' + r + ' min' : (h === 1 ? ' hour' : ' hours')) : r + ' min';
+  }
+  // One tap on a minus or plus: a quarter of an hour either way, between 1 and 10 hours.
+  function gapStep(k, d) {
+    if (k !== 'gapDay' && k !== 'gapNight') return;
+    settings.pip[k] = Math.max(60, Math.min(600, Math.round((gapSetting(k) + d) / 15) * 15));
+    saveSettings();
+  }
+  // The gap that follows a feed starting at startMs: the night gap if the day gap would carry the next feed to or past
+  // the night time (so this is the last feed before it), otherwise the day gap.
+  function feedGap(startMs) {
+    var day = gapSetting('gapDay'), night = gapSetting('gapNight'), at = hm(nightAtText());
+    var cut = new Date(startMs);
+    cut.setHours(Math.floor(at / 60), at % 60, 0, 0);
+    if (cut.getTime() <= startMs) cut.setDate(cut.getDate() + 1);
+    return startMs + day * MIN >= cut.getTime() ? night : day;
+  }
+  function feedDue(e) { return e.start + feedGap(e.start) * MIN; }
+  function feedNextView(e, ms) {
+    var due = feedDue(e), rem = due - ms;
+    return { k: 'Next feed', v: clockText(new Date(due)), due: rem < MIN,
+      s: rem >= MIN ? 'in ' + pdur(rem) : rem > -MIN ? 'due now' : pdur(-rem) + ' overdue' };
+  }
+
   // Everything the band and the night feed screen show, worked out once.
   function pipView(now) {
     var ms = now.getTime(), st = pip.status;
@@ -2059,6 +2123,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     } else {
       v.main = { k: 'Since last feed' + tail, v: '—', s: 'No feeds logged yet' };
     }
+    if (s.feed) v.next = feedNextView(s.feed, ms);
     v.c24 = { v: s.c.feeds + (s.c.feeds === 1 ? ' feed' : ' feeds'), s: s.c.wet + ' wet · ' + s.c.dirty + ' dirty' };
     if (s.runSleep) v.sleep = { k: 'Asleep', v: pdur(ms - s.runSleep.start), s: 'Since ' + clockText(new Date(s.runSleep.start)) };
     else if (s.lastSleep) v.sleep = { k: 'Awake for', v: pdur(ms - s.lastSleep.end), s: (s.c.sleepMs / HOUR).toFixed(1) + ' h sleep in 24 h' };
@@ -2080,6 +2145,14 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     return ' · ' + w + ' weeks' + (d ? ' ' + d + 'd' : ' old');
   }
 
+  // The Next feed item of a band ('p' is the nursery screen, 'hp' the Home page).
+  function paintNext(id, n) {
+    var box = $(id + '-in');
+    show(box, !!n);
+    if (!n) return;
+    setText($(id + '-kn'), n.k); setText($(id + '-vn'), n.v); setText($(id + '-sn'), n.s);
+    box.classList.toggle('alert', !!n.due);
+  }
   function renderPip(now) {
     var on = pipOn();
     document.body.classList.toggle('has-pip', on);
@@ -2091,12 +2164,13 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (v.msg) {
       main.classList.add('alert');
       setText($('p-k'), 'Pip'); setText($('p-v'), v.msg); setText($('p-s'), v.sub);
-      show($('p-i2'), false); show($('p-i3'), false); show($('p-i4'), false);
+      show($('p-in'), false); show($('p-i2'), false); show($('p-i3'), false); show($('p-i4'), false);
       pip.fast = false;
       return;
     }
     main.classList.toggle('alert', !!v.stale);
     setText($('p-k'), v.main.k); setText($('p-v'), v.main.v); setText($('p-s'), v.main.s);
+    paintNext('p', v.next);
     show($('p-i2'), !!v.side);
     if (v.side) { setText($('p-k2'), v.side.k); setText($('p-v2'), v.side.v); setText($('p-s2'), v.side.s); }
     show($('p-i3'), true);
@@ -2500,12 +2574,14 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       show($('f-sides'), !ready);
       this.paintAct(v, ready);
       if (v.msg) {
-        setText($('f-k'), 'Pip'); setText($('f-v'), v.msg); setText($('f-s'), v.sub);
+        setText($('f-k'), 'Pip'); setText($('f-v'), v.msg); setText($('f-s'), v.sub); setText($('f-next'), '');
         setText($('f-foot-l'), ''); setText($('f-foot-r'), '');
         if (feedKey !== 'msg') { $('f-sides').innerHTML = ''; feedKey = 'msg'; }
         return;
       }
       setText($('f-k'), v.main.k); setText($('f-v'), v.main.v); setText($('f-s'), v.main.s);
+      setText($('f-next'), v.next ? 'Next feed ' + v.next.v + ' · ' + v.next.s : '');
+      $('f-next').classList.toggle('due', !!(v.next && v.next.due));
       var html = v.pills ? v.pills.map(function (p) { return '<span class="feed-side' + (p.on ? ' next' : '') + '">' + p.t + '</span>'; }).join('') : '';
       if (html !== feedKey) { $('f-sides').innerHTML = html; feedKey = html; }
       setText($('f-foot-l'), v.c24.v + ' · ' + v.c24.s);
@@ -2610,7 +2686,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   // night light and the "Logged as" name stay on each device. Each setting carries the time the server
   // last saw it change, so two devices changing different settings never overwrite each other. While the
   // site is open the Pip passcode is not stored on the server (a locked site shares it too).
-  var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'slideSecs', 'pip.host', 'pip.pass', 'pip.dob', 'pip.src', 'pip.baby', 'pip.wet', 'pip.dirty', 'pip.guide'];
+  var SYNC_KEYS = ['place', 'nightFrom', 'nightTo', 'offset', 'bags', 'slideSecs', 'pip.host', 'pip.pass', 'pip.dob', 'pip.src', 'pip.baby', 'pip.wet', 'pip.dirty', 'pip.guide', 'pip.gapDay', 'pip.gapNight', 'pip.nightAt'];
   var HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
   var BAG_KEYS = ['0.2', '1.0', '2.5', '3.5'];
   function okStr(v, n) { return typeof v === 'string' && v.length <= n; }
@@ -2634,7 +2710,10 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     'pip.baby': function (v) { return okStr(v, 40); },
     'pip.wet': function (v) { return typeof v === 'number' && v % 1 === 0 && v >= 0 && v <= 20; },
     'pip.dirty': function (v) { return typeof v === 'number' && v % 1 === 0 && v >= 0 && v <= 20; },
-    'pip.guide': function (v) { return typeof v === 'boolean'; }
+    'pip.guide': function (v) { return typeof v === 'boolean'; },
+    'pip.gapDay': function (v) { return typeof v === 'number' && v % 1 === 0 && v >= 30 && v <= 720; },
+    'pip.gapNight': function (v) { return typeof v === 'number' && v % 1 === 0 && v >= 30 && v <= 720; },
+    'pip.nightAt': function (v) { return typeof v === 'string' && HHMM.test(v); }
   };
   function skGet(k) { return k.indexOf('pip.') === 0 ? settings.pip[k.slice(4)] : settings[k]; }
   function skSet(k, v) { if (k.indexOf('pip.') === 0) settings.pip[k.slice(4)] = v; else settings[k] = v; }
@@ -3401,11 +3480,12 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (v.msg) {
       main.classList.add('alert');
       setText($('hp-k'), 'Pip'); setText($('hp-v'), v.msg); setText($('hp-s'), v.sub);
-      show($('hp-i2'), false); show($('hp-i3'), false); show($('hp-i4'), false);
+      show($('hp-in'), false); show($('hp-i2'), false); show($('hp-i3'), false); show($('hp-i4'), false);
       return;
     }
     main.classList.toggle('alert', !!v.stale);
     setText($('hp-k'), v.main.k); setText($('hp-v'), v.main.v); setText($('hp-s'), v.main.s);
+    paintNext('hp', v.next);
     show($('hp-i2'), !!v.side);
     if (v.side) { setText($('hp-k2'), v.side.k); setText($('hp-v2'), v.side.v); setText($('hp-s2'), v.side.s); }
     show($('hp-i3'), true);
@@ -3601,6 +3681,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var t = f.running ? pclock(f.type === 'breast' ? feedActive(f, now) : now - f.start) : (h ? h + '<small>h</small> ' + bPad(m) + '<small>m</small>' : m + '<small>m</small>');
     var out = '<p class="b-hl">' + (f.running ? (f.paused ? 'Paused' : 'Feeding now') : 'Since last feed') + '</p><p class="b-ht">' + t + '</p><p class="b-hs">' +
       bEsc(f.running ? d.t + ' · started ' + bAt(f.start) : d.t + ' at ' + bAt(f.start) + (d.d ? ' · ' + d.d : '')) + '</p>';
+    var nx = feedNextView(f, now);
+    out += '<p class="b-nx' + (nx.due ? ' due' : '') + '">Next feed <b>' + nx.v + '</b> · ' + nx.s + '</p>';
     if (s.next && !f.running) {
       out += '<div class="b-sides">' + ['left', 'right'].map(function (x) {
         return '<div class="b-side' + (x === s.next ? ' next' : '') + '"><b>' + (x === 'left' ? 'L' : 'R') + '</b>' + (x === s.next ? 'offer next' : 'last used') + '</div>';
@@ -3730,6 +3812,10 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (pipSrc() === 'here') return 'The baby’s entries are kept by this app, and every screen and phone uses them. ' + n + ' on this device.';
     return 'The baby’s entries are still being read from and saved to the old Pip app. Bring them over first, then switch.';
   }
+  function bGapField(k, label) {
+    return '<div class="b-field"><label>' + label + '</label><div class="b-gap"><button class="b-sq" data-b="gap" data-v="' + k + ':-15" aria-label="Shorter">&minus;</button>' +
+      '<div class="b-gv">' + gapText(gapSetting(k)) + '</div><button class="b-sq" data-b="gap" data-v="' + k + ':15" aria-label="Longer">+</button></div></div>';
+  }
   function bSetHtml() {
     var guide = settings.pip.guide !== false, old = String(settings.pip.host || ''), here = pipSrc() === 'here', imp = load('nursery.import');
     var names = bKnownNames().filter(function (n) { return n !== settings.pip.by; });
@@ -3739,6 +3825,9 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       '<h2>Baby</h2><div class="b-r2"><div class="b-field"><label for="bBaby">Name</label><input class="b-in" id="bBaby" type="text" autocomplete="off" value="' + bEsc(settings.pip.baby) + '" placeholder="Pip"></div>' +
       '<div class="b-field"><label for="bDob">Date of birth</label><input class="b-in" id="bDob" type="date" value="' + bEsc(settings.pip.dob) + '"></div></div>' +
       '<p class="b-hint">The same on every screen and phone.</p>' +
+      '<h2>Next feed</h2>' + bGapField('gapDay', 'Day gap') + bGapField('gapNight', 'Night gap') +
+      '<div class="b-field"><label for="bNightAt">The night gap follows the last feed before</label><input class="b-in" id="bNightAt" type="time" value="' + bEsc(nightAtText()) + '"></div>' +
+      '<p class="b-hint">Feeds are timed from when they start, so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. The last feed before the time above is followed by the night gap instead, and feeds after that go back to the day gap. The same on every screen and phone.</p>' +
       '<h2>Nappy guide</h2><div class="b-chips"><button class="b-chip" data-b="guide" aria-pressed="' + guide + '">Show the 24 hour guide</button></div>' +
       '<div class="b-r2"><div class="b-field"><label for="bWet">Wet nappies a day</label><input class="b-in" id="bWet" type="number" min="0" max="20" inputmode="numeric" value="' + settings.pip.wet + '"></div>' +
       '<div class="b-field"><label for="bDirty">Dirty nappies a day</label><input class="b-in" id="bDirty" type="number" min="0" max="20" inputmode="numeric" value="' + settings.pip.dirty + '"></div></div>' +
@@ -4087,6 +4176,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
         break;
       case 'whoecho': save('nursery.byok', true); Baby.html = ''; Baby.paint(); break;
       case 'guide': settings.pip.guide = settings.pip.guide === false; saveSettings(); Baby.html = ''; Baby.paint(); break;
+      case 'gap': n = String(v || '').split(':'); gapStep(n[0], +n[1] || 0); Baby.html = ''; refresh(); break;
       case 'import': bImport(); break;
       case 'usehere': bSwitch('here'); break;
       case 'useold': bSwitch('old'); break;
@@ -4223,6 +4313,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     else if (id === 'bWet') settings.pip.wet = clamp(Math.round(+v || 0), 0, 20);
     else if (id === 'bDirty') settings.pip.dirty = clamp(Math.round(+v || 0), 0, 20);
     else if (id === 'bOld') { settings.pip.host = v.trim().slice(0, 200); pip.status = 'idle'; }
+    else if (id === 'bNightAt') { if (!timeOk(v)) { Baby.html = ''; Baby.paint(); return; } settings.pip.nightAt = v; }
     else return;
     saveSettings(); render(); Baby.html = '';
     // Redraw once focus has landed on whatever was tapped next (the next field, say), so it isn't swapped out from under it.
