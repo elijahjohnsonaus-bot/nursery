@@ -17,6 +17,10 @@ import photos from '../netlify/functions/photos.js';
 // Then open  https://YOUR-SITE/api/import  in a browser (add ?key=PASSCODE if this site has a passcode). It shows a
 // page that keeps going by itself until everything is across (photos come over a few at a time) and says when it is done.
 // Add &json=1 to see the raw answer instead. Delete IMPORT_FROM afterwards.
+//
+// Entries typed in by hand from photos of the Echo (ids starting photo-) while the old site was paused are tidied up at
+// the end: when the real copy of one has come across (same kind, same minute) the photo copy is removed.
+// A photo entry with no real match stays, so nothing is ever lost, and running the import again catches any that arrive later.
 
 const CHUNK = 500;
 const PHOTOS_PER_CALL = 5;   // a free Worker may only make about 50 outside calls per visit
@@ -61,7 +65,10 @@ function go(n) {
       if (s.settingsError) bits.push('could not read the settings');
       add(s.from + ': ' + bits.join(', '));
     });
-    if (d.done) return stop('Done. Everything is across. You can delete IMPORT_FROM now.', 'ok');
+    if (d.done) {
+      if (d.removed) add('Removed ' + d.removed + ' entries that were typed in from photos, now that the real ones are here.');
+      return stop('Done. Everything is across. You can delete IMPORT_FROM now.', 'ok');
+    }
     if (d.problems) return stop('Some of it could not be read from the old site, so it is not finished. If the old site is still paused, try again once it is back.', 'bad');
     if (n >= 200) return stop('Stopped after 200 rounds. Open this page again to carry on.', 'bad');
     go(n + 1);
@@ -70,6 +77,29 @@ function go(n) {
 again.onclick = function () { log.textContent = ''; again.hidden = true; go(1); };
 go(1);
 </script></body></html>`;
+
+const PHOTO = 'photo-';
+const minuteKey = (e) => e.type + '|' + Math.floor(+e.start / 60000);   // who logged it is left out on purpose: the screen may say a different name than the photo did
+
+async function dropPhotoDuplicates(self, mine, json) {
+  const res = await sync(new Request(self + '/api/sync?since=0', { headers: mine }));
+  if (!res.ok) return 0;
+  const all = ((await res.json()).entries || []).filter((e) => e && +e.start);
+  const spare = new Map();   // real copies in each minute that a photo entry has not already been matched with
+  const count = (k, n) => spare.set(k, (spare.get(k) || 0) + n);
+  for (const e of all) {
+    if (!String(e.id).startsWith(PHOTO)) { if (!e.deleted) count(minuteKey(e), 1); }
+    else if (e.deleted) count(minuteKey(e), -1);   // removed earlier, so it has used up a real copy already
+  }
+  const gone = [];
+  for (const e of all) {
+    if (e.deleted || !String(e.id).startsWith(PHOTO)) continue;
+    const k = minuteKey(e);
+    if ((spare.get(k) || 0) > 0) { count(k, -1); gone.push({ ...e, deleted: true, updated: Date.now() }); }
+  }
+  if (gone.length) await sync(new Request(self + '/api/sync', { method: 'POST', headers: json, body: JSON.stringify({ since: Number.MAX_SAFE_INTEGER, entries: gone }) }));
+  return gone.length;
+}
 
 async function read(src, path, as = 'json') {
   const headers = src.pass ? { 'x-nursery-pass': src.pass, 'x-pip-pass': src.pass } : {};
@@ -139,5 +169,8 @@ export default async (req) => {
   }
   const left = report.reduce((n, r) => n + r.photosLeft, 0);
   const problems = report.some((r) => r.entriesError || r.photosError || r.settingsError);
-  return reply({ done: left === 0 && !problems, photosLeft: left || undefined, problems: problems || undefined, sources: report });
+  const done = left === 0 && !problems;
+  let removed = 0;
+  if (done) { try { removed = await dropPhotoDuplicates(self, mine, json); } catch { /* the copy itself is done; tidying can wait for next time */ } }
+  return reply({ done, photosLeft: left || undefined, problems: problems || undefined, removed: removed || undefined, sources: report });
 };
