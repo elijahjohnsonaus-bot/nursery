@@ -1,0 +1,28 @@
+{
+  // The nursery screen on Cloudflare. Deploy with: npx wrangler deploy (or connect the GitHub repo in the Cloudflare dashboard).
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nursery",
+  "main": "cloudflare/worker.js",
+  "compatibility_date": "2026-10-19",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The page, photos page, service worker, manifest and icons are served straight from the top folder. Only /api/ runs the Worker.
+  // Files that aren't part of the site are listed in .assetsignore.
+  "assets": {
+    "directory": "./",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+
+  // The functions import @netlify/blobs; on Cloudflare that is swapped for cloudflare/blobs.js.
+  "alias": { "@netlify/blobs": "./cloudflare/blobs.js" },
+
+  // Where the baby's entries, shared settings and photos are kept. SQLite-backed, which the free plan allows.
+  "durable_objects": { "bindings": [{ "name": "STORE", "class_name": "Store" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Store"] }],
+
+  // Settings added in the Cloudflare dashboard (CALENDAR_FEEDS, NURSERY_PASSCODE and so on) are kept when the site is redeployed.
+  "keep_vars": true,
+
+  "observability": { "enabled": true }
+}

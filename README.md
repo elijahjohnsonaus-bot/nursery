@@ -28,9 +28,46 @@ The screen has three pages. It opens on **Home**: the clock and date, the weathe
 
 ## Putting it online
 
-The repo is deployed by Netlify. There is no build command. `netlify.toml` sets the publish directory (the repo root) and the functions folder, and Netlify installs the function's one dependency (`@netlify/blobs`) by itself. Every push to `main` goes live, and the Echo picks up the new version by itself (it checks every 5 minutes, and only reloads in the day look with nothing playing or open).
+The same page and the same functions run on Netlify or on Cloudflare. Only the storage underneath is different. Either way the Echo picks up a new version by itself (it checks every 5 minutes, and only reloads in the day look with nothing playing or open), and in Fully Kiosk the start URL is the site's address.
 
-In Fully Kiosk, set the start URL to the Netlify address.
+### On Netlify
+
+There is no build command. `netlify.toml` sets the publish directory (the repo root) and the functions folder, and Netlify installs the function's one dependency (`@netlify/blobs`) by itself. Every push to `main` goes live. Netlify's free plan is a monthly allowance of credits (each production deploy costs 15, and requests, bandwidth and function time cost more), and when they run out every site on the account is paused until the month turns over.
+
+### On Cloudflare
+
+`wrangler.jsonc` and the `cloudflare/` folder run the site as a Cloudflare Worker. `cloudflare/worker.js` calls the same functions as Netlify. `cloudflare/store.js` (a Durable Object with SQLite storage) takes the place of Netlify Blobs for the baby's entries, the shared settings and the photos. The free plan has no monthly credits. It allows 100,000 requests a day and 10 ms of processing per request, and if a daily limit is ever reached it clears the next day instead of taking the site offline for a month.
+
+To set it up:
+
+1. Make a free account at dash.cloudflare.com.
+2. Workers & Pages, Create application, Import a repository, and connect GitHub (log in to GitHub as the account that owns this repo). Choose this repo and the branch that has `wrangler.jsonc`. Leave the build command empty and the deploy command as `npx wrangler deploy`. The Worker's name must stay `nursery` to match `wrangler.jsonc`.
+3. When the first build finishes the site is live at `https://nursery.YOUR-SUBDOMAIN.workers.dev`. Every push to that branch redeploys it.
+4. Open the Worker, Settings, Variables and secrets, and add what the site needs. These are the same names as on Netlify, and they are kept when the site redeploys:
+   - `CALENDAR_FEEDS` (add as a secret): the calendar links, as described under Calendar below.
+   - `CALENDAR_TZ`: only if the time zone is not Australia/Sydney.
+   - `NURSERY_PASSCODE` (add as a secret): only to lock the site (see Locking it).
+5. Point Fully Kiosk and any phone shortcuts at the new address.
+
+A new address is a new site as far as a device is concerned, so each phone starts with nothing saved on it (it will ask for "Logged as" again). Everything shared lives on the server, which is what the next section moves across.
+
+#### Moving the data over from Netlify
+
+This copies the baby's entries, the shared settings and the photos from the Netlify site (and the old Pip app, if you like) into the Cloudflare one. It only reads from the old sites and never changes them, and it is safe to run again. It cannot read a Netlify site while Netlify has it paused, so do it once the old site is back.
+
+1. In the Worker's Variables and secrets, add `IMPORT_FROM` with one old site per line, as its address, followed by `|` and its passcode if it has one:
+
+   ```
+   https://nurseryapp1.netlify.app
+   https://babyapp12.netlify.app|PIPPASSCODE
+   ```
+
+2. Open `https://nursery.YOUR-SUBDOMAIN.workers.dev/api/import` (add `?key=YOUR-NURSERY-PASSCODE` on the end if you set one). The page keeps going by itself, because photos come across a few at a time, and says Done when everything is across. If it says some of it could not be read, the old site is probably still paused. Try again later.
+3. Delete `IMPORT_FROM`.
+
+Photos are the only slow part. Anything added to the old site after the copy has to be added again.
+
+The calendar is read fresh on every request, so a large shared calendar is trimmed to the next two weeks before it is parsed (`trimFeed` in `netlify/lib/ical.js`), which keeps it inside the free plan's 10 ms.
 
 ## Shared settings
 
@@ -45,13 +82,13 @@ How it behaves:
 - Each setting is saved on its own, so changing the night times on one device and the location on another keeps both. If two devices change the same setting, the later save wins.
 - If the server is unreachable, each device keeps working with its own settings and catches up later.
 - Disconnecting the old Pip on one device disconnects it on every device.
-- Settings are kept in a private Netlify Blobs store, never in this repo.
+- Settings are kept in a private store (Netlify Blobs, or the Durable Object on Cloudflare), never in this repo.
 
 The site is open, like Pip was: anyone who has the address can use it, and that includes reading and adding the baby's entries. Keep the address to yourselves. That also applies to the family calendar and photos below. While the site is open the old Pip's passcode is not stored on the server, so if the old Pip has a passcode, type it once on each device.
 
 ### Locking it (optional)
 
-To require a passcode, add `NURSERY_PASSCODE` in Netlify (Site configuration, Environment variables) and redeploy the site. Every device then needs that passcode once, which also shares the old Pip's passcode. The baby's entries are locked as well. Either open this link once on each device (the part after `#` is never sent to a server, and is removed from the address once saved):
+To require a passcode, add `NURSERY_PASSCODE` in Netlify (Site configuration, Environment variables, then redeploy the site) or in Cloudflare (the Worker's Variables and secrets). Every device then needs that passcode once, which also shares the old Pip's passcode. The baby's entries are locked as well. Either open this link once on each device (the part after `#` is never sent to a server, and is removed from the address once saved):
 
 `https://YOUR-NURSERY-SITE/#key=YOUR-NURSERY-PASSCODE`
 
@@ -63,10 +100,10 @@ The Family button (next to Settings) opens the next two weeks of the family's ca
 
 ### Calendar
 
-Each person shares their Apple Calendar as a public link, and the links go into Netlify, not into this repo:
+Each person shares their Apple Calendar as a public link, and the links go into the host's settings (Netlify or Cloudflare), not into this repo:
 
 1. On an iPhone, open Calendar, tap Calendars, then the (i) next to the calendar, turn on Public Calendar and copy the link. (On a Mac, right click the calendar and choose Share Calendar, then Public Calendar.) Any calendar that gives an `.ics` or `webcal://` link works too. For Google Calendar, open Settings on a laptop, click the calendar under Settings for my calendars, then Integrate calendar, and copy the **Secret address in iCal format** (it ends in `basic.ics`). The other Google links, such as the shareable link with `?cid=` in it, open a web page and the screen will say so. A calendar's link shows every event in that calendar, so make a separate Family calendar rather than sharing your main one.
-2. In Netlify, Site configuration, Environment variables, add `CALENDAR_FEEDS` with one person per line (or separated by `;`), as `Name|#colour|link`. The colour is optional.
+2. In Netlify (Site configuration, Environment variables) or Cloudflare (the Worker's Variables and secrets, as a secret), add `CALENDAR_FEEDS` with one person per line (or separated by `;`), as `Name|#colour|link`. The colour is optional.
 
    ```
    Elijah|#2E72B2|webcal://p12-caldav.icloud.com/published/2/AAAA
@@ -78,7 +115,7 @@ Each person shares their Apple Calendar as a public link, and the links go into 
 
 The screen lists the next 14 days under Today, Tomorrow and then dates. Each entry has its person's colour, the time (or All day), where it is and who it is for. Events that have finished today are dimmed. Repeating events, all-day and multi-day events and cancelled events are handled. If one calendar cannot be read, the others still show and the screen says which one failed. The last calendar is kept on the device, so it still shows if the Wi-Fi drops.
 
-Anyone with that link can read that calendar, so share only calendars you are happy to have public, and keep the links private. They are only ever kept in the Netlify environment variable. While the site is open, anyone who has the nursery site's address can see the family calendar, so lock it (above) if you want it private.
+Anyone with that link can read that calendar, so share only calendars you are happy to have public, and keep the links private. They are only ever kept in that environment variable. While the site is open, anyone who has the nursery site's address can see the family calendar, so lock it (above) if you want it private.
 
 ### Photos
 
@@ -88,7 +125,7 @@ The photos show as a shuffled slideshow in the corner of the Home page, all day 
 
 Full screen is only ever started by you: tap the photo on Home, or use Family, then Photo frame (a blurred backdrop so nothing is cropped). Tap anywhere to close it. It also closes by itself when the night look starts. Nothing starts it automatically.
 
-Photos are stored in a private Netlify Blobs store, never in this repo. While the site is open, anyone who has the site's address can see, add and delete photos, so lock it if you want them private.
+Photos are stored in a private store (Netlify Blobs, or the Durable Object on Cloudflare), never in this repo. While the site is open, anyone who has the site's address can see, add and delete photos, so lock it if you want them private.
 
 ## The Baby page
 
@@ -178,4 +215,7 @@ Planned: a small sensor board in the room posts the real temperature, and the sc
 - `netlify/functions/sync.js`: stores the baby's entries and shares them between devices (`/api/sync`). The same protocol the Pip app used.
 - `manifest.json`, `sw.js`, `icon-*.png`: let a phone add the app to its home screen and open it with no signal.
 - `netlify/lib/auth.js`, `netlify/lib/ical.js`: the passcode check, and the calendar file reader.
-- `netlify.toml`, `package.json`: Netlify settings and the functions' one dependency.
+- `netlify.toml`: Netlify settings.
+- `wrangler.jsonc`, `.assetsignore`: the Cloudflare Worker's settings, and the files that stay private (everything that isn't the website).
+- `cloudflare/worker.js`: runs the functions above on Cloudflare. `cloudflare/store.js` and `cloudflare/blobs.js`: the storage that takes the place of Netlify Blobs. `cloudflare/import.js`: the one-off copy from the Netlify sites.
+- `package.json`: the functions' one dependency, and Wrangler for working on the Cloudflare side.
