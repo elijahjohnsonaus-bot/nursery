@@ -1,5 +1,5 @@
 import { refuse, reply } from '../lib/auth.js';
-import { parseEvents, expand, safeTz, zonedToUtc, zonedDate, dayNum, dayString } from '../lib/ical.js';
+import { parseEvents, trimFeed, expand, safeTz, zonedToUtc, zonedDate, dayNum, dayString } from '../lib/ical.js';
 
 // The family calendar for the nursery screen.
 //
@@ -53,7 +53,7 @@ async function readFeed(feed, win) {
   const text = await res.text();
   if (text.length > MAX_FEED_BYTES) throw Object.assign(new Error('big'), { code: 'too-big' });
   if (!/BEGIN:VCALENDAR/i.test(text)) throw Object.assign(new Error('not a calendar'), { code: 'not-a-calendar' });
-  return expand(parseEvents(text), win);
+  return expand(parseEvents(trimFeed(text, win.fromDay, win.toDay)), win);
 }
 
 export default async (req) => {

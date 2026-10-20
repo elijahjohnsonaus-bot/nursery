@@ -182,6 +182,50 @@ export function parseEvents(text) {
   return events.map(toEvent).filter(Boolean);
 }
 
+// ------------------------------------------------------------------ keeping a long calendar quick
+// A shared calendar lists every event it has ever held, and reading all of them is the slow part. This drops the events
+// that can't touch the window before that happens, working on the raw text. Anything that might touch it is kept:
+// repeating events, changed occurrences, and any event it can't read a date from. So the answer is the same, only quicker.
+const KEEP = /RRULE|RDATE|EXDATE|RECURRENCE-ID/;
+function propDay(block, name) {
+  const i = block.indexOf('\n' + name);
+  if (i < 0) return null;
+  const c = block.indexOf(':', i), e = block.indexOf('\n', i + 1);
+  if (c < 0 || (e >= 0 && c > e)) return undefined;
+  const v = block.slice(c + 1, c + 9);
+  return /^\d{8}$/.test(v) ? dayNum(+v.slice(0, 4), +v.slice(4, 6), +v.slice(6, 8)) : undefined;
+}
+export function trimFeed(text, fromDay, toDay) {
+  const [fy, fm, fd] = fromDay.split('-').map(Number), [ty, tm, td] = toDay.split('-').map(Number);
+  const lo = dayNum(fy, fm, fd) - 2, hi = dayNum(ty, tm, td) + 2;   // a day or two of slack for time zones
+  let pos = text.indexOf('BEGIN:VEVENT');
+  if (pos < 0) return text;
+  const out = [text.slice(0, pos)];
+  for (;;) {
+    const start = text.indexOf('BEGIN:VEVENT', pos);
+    if (start < 0) { out.push(text.slice(pos)); break; }
+    out.push(text.slice(pos, start));
+    let end = text.indexOf('END:VEVENT', start);
+    if (end < 0) { out.push(text.slice(start)); break; }
+    end = text.indexOf('\n', end);
+    end = end < 0 ? text.length : end + 1;
+    const block = text.slice(start, end);
+    pos = end;
+    let keep = KEEP.test(block);
+    if (!keep) {
+      const a = propDay(block, 'DTSTART');
+      if (a === null || a === undefined) keep = true;
+      else {
+        const b = propDay(block, 'DTEND');
+        if (b === undefined || (b === null && block.includes('\nDURATION'))) keep = true;
+        else keep = a <= hi && Math.max(a, b === null ? a : b) >= lo;
+      }
+    }
+    if (keep) out.push(block);
+  }
+  return out.join('');
+}
+
 // ------------------------------------------------------------------ repeating events
 function monthDays(y, mo, rule, startDay) {
   // Days in one month that the rule picks (as day numbers), in order.
