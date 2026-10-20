@@ -919,7 +919,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 
     <div class="set" id="feedSet">
       <h3>Next feed</h3>
-      <p class="hint">Feeds are timed from when they start, so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. The last feed before the time below is followed by the night gap instead, and feeds after that go back to the day gap. Shown on the nursery and Home screens, the night feed screen and the Baby page.</p>
+      <p class="hint">Breast feeds are timed from when they start (bottles don&rsquo;t count), so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. A breast feed that starts within an hour of the one before it counts as part of it. The last feed before the time below is followed by the night gap instead, and feeds after that go back to the day gap. Shown on the nursery and Home screens, the night feed screen and the Baby page.</p>
       <div class="row"><span class="lbl">Day gap</span><button class="btn" data-gap="gapDay" data-d="-15" aria-label="Shorter">&minus;</button><span class="gapval" id="gapDayV"></span><button class="btn" data-gap="gapDay" data-d="15" aria-label="Longer">+</button></div>
       <div class="row"><span class="lbl">Night gap</span><button class="btn" data-gap="gapNight" data-d="-15" aria-label="Shorter">&minus;</button><span class="gapval" id="gapNightV"></span><button class="btn" data-gap="gapNight" data-d="15" aria-label="Longer">+</button></div>
       <div class="row"><span class="lbl">Last feed before</span><input type="time" id="nightAt" aria-label="The night gap follows the last feed before this time"><span class="muted">is followed by the night gap</span></div>
@@ -955,7 +955,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 (function () {
   'use strict';
 
-  var VERSION = '20 Oct 2026, v11';
+  var VERSION = '20 Oct 2026, v12';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -1977,14 +1977,20 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     return out;
   }
 
+  var ANCHOR_WINDOW = 60 * 60000;   // a breast feed within this long of the previous one's start belongs to it
   // The same rules Pip uses on its own home screen.
   function pipStats(ms) {
     var list = pipList();
-    var s = { feed: null, runFeed: null, runSleep: null, lastSleep: null, next: null, c: { feeds: 0, wet: 0, dirty: 0, sleepMs: 0 } };
+    var s = { feed: null, runFeed: null, runSleep: null, lastSleep: null, next: null, anchor: null, anchorDone: false, c: { feeds: 0, wet: 0, dirty: 0, sleepMs: 0 } };
     var from = ms - DAY;
     list.forEach(function (e) {
       var isFeed = e.type === 'breast' || e.type === 'bottle';
       if (isFeed && !s.feed) s.feed = e;
+      // The next feed is counted from a breast feed only (never a bottle). A breast feed that starts within an hour of
+      // the one before it is the baby coming back for more, so the schedule stays with the first.
+      if (e.type === 'breast' && !s.anchorDone) {
+        if (!s.anchor || s.anchor.start - e.start < ANCHOR_WINDOW) s.anchor = e; else s.anchorDone = true;
+      }
       if (isFeed && e.running && !s.runFeed) s.runFeed = e;
       if (e.type === 'sleep' && e.running && !s.runSleep) s.runSleep = e;
       if (e.type === 'sleep' && e.end && !s.lastSleep) s.lastSleep = e;
@@ -2055,8 +2061,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   }
 
   // ---- when the next feed is due
-  // Feeds are timed from the START of the last one: a feed that starts at 3:00 pm is followed by one at 6:00 pm (a 3 hour
-  // gap) even if it runs until 3:30 pm. The last feed before the night time (12:00 am to begin with) gets the longer night
+  // Breast feeds are timed from the START of the last one (bottles don't count): a feed that starts at 3:00 pm is followed
+  // by one at 6:00 pm (a 3 hour gap) even if it runs until 3:30 pm. The last feed before the night time (12:00 am to begin with) gets the longer night
   // gap instead, so the first stretch of the night can be longer. Feeds after that go back to the day gap.
   function timeOk(v) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(v); }
   function gapSetting(k) {
@@ -2123,7 +2129,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     } else {
       v.main = { k: 'Since last feed' + tail, v: '—', s: 'No feeds logged yet' };
     }
-    if (s.feed) v.next = feedNextView(s.feed, ms);
+    if (s.anchor) v.next = feedNextView(s.anchor, ms);
     v.c24 = { v: s.c.feeds + (s.c.feeds === 1 ? ' feed' : ' feeds'), s: s.c.wet + ' wet · ' + s.c.dirty + ' dirty' };
     if (s.runSleep) v.sleep = { k: 'Asleep', v: pdur(ms - s.runSleep.start), s: 'Since ' + clockText(new Date(s.runSleep.start)) };
     else if (s.lastSleep) v.sleep = { k: 'Awake for', v: pdur(ms - s.lastSleep.end), s: (s.c.sleepMs / HOUR).toFixed(1) + ' h sleep in 24 h' };
@@ -3681,8 +3687,10 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var t = f.running ? pclock(f.type === 'breast' ? feedActive(f, now) : now - f.start) : (h ? h + '<small>h</small> ' + bPad(m) + '<small>m</small>' : m + '<small>m</small>');
     var out = '<p class="b-hl">' + (f.running ? (f.paused ? 'Paused' : 'Feeding now') : 'Since last feed') + '</p><p class="b-ht">' + t + '</p><p class="b-hs">' +
       bEsc(f.running ? d.t + ' · started ' + bAt(f.start) : d.t + ' at ' + bAt(f.start) + (d.d ? ' · ' + d.d : '')) + '</p>';
-    var nx = feedNextView(f, now);
-    out += '<p class="b-nx' + (nx.due ? ' due' : '') + '">Next feed <b>' + nx.v + '</b> · ' + nx.s + '</p>';
+    if (s.anchor) {
+      var nx = feedNextView(s.anchor, now);
+      out += '<p class="b-nx' + (nx.due ? ' due' : '') + '">Next feed <b>' + nx.v + '</b> · ' + nx.s + '</p>';
+    }
     if (s.next && !f.running) {
       out += '<div class="b-sides">' + ['left', 'right'].map(function (x) {
         return '<div class="b-side' + (x === s.next ? ' next' : '') + '"><b>' + (x === 'left' ? 'L' : 'R') + '</b>' + (x === s.next ? 'offer next' : 'last used') + '</div>';
@@ -3827,7 +3835,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       '<p class="b-hint">The same on every screen and phone.</p>' +
       '<h2>Next feed</h2>' + bGapField('gapDay', 'Day gap') + bGapField('gapNight', 'Night gap') +
       '<div class="b-field"><label for="bNightAt">The night gap follows the last feed before</label><input class="b-in" id="bNightAt" type="time" value="' + bEsc(nightAtText()) + '"></div>' +
-      '<p class="b-hint">Feeds are timed from when they start, so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. The last feed before the time above is followed by the night gap instead, and feeds after that go back to the day gap. The same on every screen and phone.</p>' +
+      '<p class="b-hint">Breast feeds are timed from when they start (bottles don’t count), so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. A breast feed that starts within an hour of the one before it counts as part of it. The last feed before the time above is followed by the night gap instead, and feeds after that go back to the day gap. The same on every screen and phone.</p>' +
       '<h2>Nappy guide</h2><div class="b-chips"><button class="b-chip" data-b="guide" aria-pressed="' + guide + '">Show the 24 hour guide</button></div>' +
       '<div class="b-r2"><div class="b-field"><label for="bWet">Wet nappies a day</label><input class="b-in" id="bWet" type="number" min="0" max="20" inputmode="numeric" value="' + settings.pip.wet + '"></div>' +
       '<div class="b-field"><label for="bDirty">Dirty nappies a day</label><input class="b-in" id="bDirty" type="number" min="0" max="20" inputmode="numeric" value="' + settings.pip.dirty + '"></div></div>' +
