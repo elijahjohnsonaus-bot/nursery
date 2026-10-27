@@ -1020,6 +1020,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   // ---------- page mode ----------
   var params = new URLSearchParams(location.search);
   var podMode = /^(\d{1,3}\.){3}\d{1,3}$/.test(location.hostname) && !params.has('outside');
+  var roomOn = !podMode && /^https?:$/.test(location.protocol);   // the sensor pod posts to this site; the page reads it back from /api/room
   var forced = params.has('night') ? 'night' : (params.has('day') ? 'day' : null);
 
   // One-time setup link: page address followed by #key=NURSERY_PASSCODE (turns on shared settings) and/or
@@ -1075,6 +1076,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   var weather = load('nursery.weather');   // { at, key, data }
   var air = load('nursery.air');           // { at, key, pm }
   var pod = null;                          // { temp, hum, at }
+  var room = null;                         // { temp, hum, at } from the sensor pod, via /api/room
 
   function weatherUrl(full) {
     var p = settings.place;
@@ -1124,6 +1126,20 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     }).catch(function () { /* render() hides it once stale */ }).then(render);
   }
 
+  function readRoom() {
+    if (!roomOn) return;
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 8000);
+    fetch('/api/room', { cache: 'no-store', headers: sync.pass ? { 'x-nursery-pass': sync.pass } : {}, signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { clearTimeout(timer); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        var t = num(d && d.temp), age = num(d && d.age);
+        room = (t === null || age === null) ? null : { temp: t, hum: num(d.hum), at: Date.now() - age };
+      })
+      .catch(function () { clearTimeout(timer); /* keep the last reading; reading() drops it once it is stale */ })
+      .then(render);
+  }
+
   function hourIndex(times, ms) {
     for (var i = times.length - 1; i >= 0; i--) {
       if (times[i] * 1000 <= ms) return (ms - times[i] * 1000 < 3600000) ? i : -1;
@@ -1151,8 +1167,12 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   function maxOf(list) { var m = null; list.forEach(function (x) { if (!m || x.temp > m.temp) m = x; }); return m; }
 
   // The temperature the advice goes by, with where it came from.
-  function reading(now) {
+  // outsideOnly skips the room sensor, for the parts that are about the outside figure.
+  function reading(now, outsideOnly) {
     var ms = now.getTime();
+    if (!outsideOnly && !podMode && room && ms - room.at <= 5 * 60000) {
+      return { temp: room.temp, hum: room.hum, source: 'pod', live: true };
+    }
     if (podMode) {
       if (!pod || ms - pod.at > 3 * 60000) return null;
       return { temp: pod.temp, hum: pod.hum, source: 'pod', live: true };
@@ -1361,7 +1381,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var start = hourStart.getTime();
     var morning = nextMorning(now).getTime(), end = morning - start <= 14 * 3600000 ? morning + 1 : start + 12 * 3600000 + 1;
     var span = between(list, start, end).slice(0, 14);
-    var live = reading(now);
+    var live = reading(now, true);
     if (span.length && live && live.source === 'outside') span[0] = { ms: span[0].ms, temp: live.temp }; // "Now" matches the big number
     var adj = podMode ? 0 : (settings.offset || 0);
     var key = mode + '|' + span.map(function (x) { return Math.round(x.temp * 10); }).join(',') + '|' + adj + '|' + JSON.stringify(settings.bags) + '|' + (span[0] ? span[0].ms : '');
@@ -1745,7 +1765,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 
   // ---------- settings panel ----------
   var roomDraft = null;
-  function outsideTemp() { var r = reading(new Date()); return r && r.source === 'outside' ? r.temp : null; }
+  function outsideTemp() { var r = reading(new Date(), true); return r && r.source === 'outside' ? r.temp : null; }
   function syncSettings() {
     setText(el.placeName, 'Using ' + settings.place.name + '.');
     el.nightFrom.value = settings.nightFrom; el.nightTo.value = settings.nightTo;
@@ -4430,6 +4450,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   loadWeather();
   loadAir();
   readPod();
+  readRoom();
   pipLoad();
   syncUi();
   syncSoon(500);
@@ -4443,6 +4464,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   setInterval(loadWeather, 15 * 60000);
   setInterval(loadAir, 30 * 60000);
   if (podMode) setInterval(readPod, 30000);
+  if (roomOn) setInterval(readRoom, 30000);
   setInterval(function () { tipIndex++; }, 20000);
   setInterval(nudge, 2 * 60000);
   setInterval(checkForUpdate, 5 * 60000);

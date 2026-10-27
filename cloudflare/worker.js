@@ -2,6 +2,7 @@ import sync from '../netlify/functions/sync.js';
 import settings from '../netlify/functions/settings.js';
 import calendar from '../netlify/functions/calendar.js';
 import photos from '../netlify/functions/photos.js';
+import room from '../netlify/functions/room.js';
 import importer from './import.js';
 
 // The Cloudflare version of the site. The page and its files are served from the repo's top folder (see
@@ -10,7 +11,7 @@ import importer from './import.js';
 
 export { Store } from './store.js';
 
-const routes = { '/api/sync': sync, '/api/settings': settings, '/api/calendar': calendar, '/api/photos': photos, '/api/import': importer };
+const routes = { '/api/sync': sync, '/api/settings': settings, '/api/calendar': calendar, '/api/photos': photos, '/api/room': room, '/api/import': importer };
 const headers = { 'content-type': 'application/json', 'cache-control': 'no-store' };
 const send = (body, status) => new Response(JSON.stringify(body), { status, headers });
 
