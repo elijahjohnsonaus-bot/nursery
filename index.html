@@ -1200,13 +1200,15 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     { min: 27, max: Infinity, zone: 'hot', tog: '0.2', wear: ['nappy'], under: 'Just a nappy underneath', note: 'Very warm. Cool the room if you can.' },
     { min: 24, max: 27, zone: 'warm', tog: '0.2', wear: ['ss'], under: 'Short-sleeve bodysuit underneath' },
     { min: 22, max: 24, zone: 'mild', tog: '1.0', wear: ['ss'], under: 'Short-sleeve bodysuit underneath',
-      alts: [{ tog: null, text: 'No bag: short-sleeve bodysuit with a light blanket tucked in firmly' }] },
+      alts: [{ tog: '0.2', text: '0.2 TOG bag with a short-sleeve bodysuit and a light blanket tucked in firmly' }] },
     { min: 20, max: 22, zone: 'mild', tog: '1.0', wear: ['ls'], under: 'Long-sleeve bodysuit underneath',
-      alts: [{ tog: '0.2', text: '0.2 TOG bag with a long-sleeve bodysuit and growsuit underneath' },
-             { tog: null, text: 'No bag: long-sleeve bodysuit and growsuit with a light blanket tucked in firmly' }] },
-    { min: 18, max: 20, zone: 'cool', tog: '2.5', wear: ['ls'], under: 'Long-sleeve bodysuit underneath' },
-    { min: 16, max: 18, zone: 'cool', tog: '2.5', wear: ['grow'], under: 'Growsuit underneath' },
-    { min: -Infinity, max: 16, zone: 'cold', tog: '3.5', wear: ['ls', 'grow'], under: 'Long-sleeve bodysuit and growsuit underneath' }
+      alts: [{ tog: '1.0', text: '1.0 TOG bag with a short-sleeve bodysuit and a light blanket tucked in firmly' }] },
+    { min: 18, max: 20, zone: 'cool', tog: '2.5', wear: ['ls'], under: 'Long-sleeve bodysuit underneath',
+      alts: [{ tog: '2.5', text: '2.5 TOG bag with a short-sleeve bodysuit and a light blanket tucked in firmly' }] },
+    { min: 16, max: 18, zone: 'cool', tog: '2.5', wear: ['grow'], under: 'Growsuit underneath',
+      alts: [{ tog: '2.5', text: '2.5 TOG bag with a long-sleeve bodysuit and a light blanket tucked in firmly' }] },
+    { min: -Infinity, max: 16, zone: 'cold', tog: '3.5', wear: ['ls', 'grow'], under: 'Long-sleeve bodysuit and growsuit underneath',
+      alts: [{ tog: '2.5', needs: '3.5', text: '2.5 TOG bag with a long-sleeve bodysuit, growsuit and a light blanket tucked in firmly' }] }
   ];
   var HYSTERESIS = 0.3; // stops the advice flicking back and forth right on a boundary
   var ROOM_FOLLOW = 0.5; // how much of an outside swing reaches the room overnight (0 = none, 1 = all of it)
@@ -1219,7 +1221,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   function outfitFor(state) {
     var o = { zone: state.zone, tog: state.tog, wear: state.wear, under: state.under, note: state.note || null };
     // "Or" options, only the bag ones you actually have
-    o.alts = (state.alts || []).filter(function (a) { return !a.tog || settings.bags[a.tog]; }).map(function (a) { return 'Or ' + a.text.charAt(0).toLowerCase() + a.text.slice(1); });
+    o.alts = (state.alts || []).filter(function (a) { return (!a.tog || settings.bags[a.tog]) && (!a.needs || settings.bags[a.needs]); }).map(function (a) { return 'Or ' + a.text.charAt(0).toLowerCase() + a.text.slice(1); });
     if (state.tog === '3.5' && !settings.bags['3.5'] && settings.bags['2.5']) {
       o.tog = '2.5'; o.wear = ['ls', 'grow'];
       o.under = 'Long-sleeve bodysuit and growsuit underneath';
