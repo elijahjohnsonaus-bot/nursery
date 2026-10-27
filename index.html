@@ -121,9 +121,10 @@ body.night :focus-visible{outline-color:var(--amber)}
 .bagline{font-size:5.4vmin; font-weight:600; line-height:1.1; margin-top:2.6vmin}
 .under{font-size:3.3vmin; line-height:1.3; margin-top:.8vmin; color:var(--ink-soft)}
 .note{font-size:2.9vmin; font-weight:500; margin-top:1.1vmin; color:var(--accent)}
+.alt{font-size:2.8vmin; line-height:1.3; margin-top:.7vmin; color:var(--ink-soft); white-space:pre-line}
 .basis{font-size:2.5vmin; margin-top:1.1vmin; color:var(--ink-soft)}
 
-body.blank .reading, body.blank .strip, body.blank .figures, body.blank .basis{display:none}
+body.blank .reading, body.blank .strip, body.blank .figures, body.blank .basis, body.blank .alt{display:none}
 body.blank .outfit{grid-column:1 / -1}
 body.blank .bagline{font-size:7vmin}
 body.blank .under{font-size:4vmin}
@@ -176,7 +177,7 @@ body.night .tonight .head, body.night .tl-hour, body.night .today .k, body.night
 
 .tip{grid-area:tip; font-size:2.5vmin; color:var(--ink-soft)}
 body.night .tip{display:none}
-body.night .facts, body.night .under, body.night .basis, body.night .kicker, body.night .date, body.night .pill, body.night .clock{color:var(--amber-dim)}
+body.night .facts, body.night .under, body.night .alt, body.night .basis, body.night .kicker, body.night .date, body.night .pill, body.night .clock{color:var(--amber-dim)}
 body.night .note{color:var(--amber)}
 body.night .temp{font-weight:400}
 body.night .bagline{font-weight:500}
@@ -262,7 +263,7 @@ body.has-pip .pip{display:flex}
   body.has-pip .temp{font-size:18vmin}
   body.has-pip .figures{height:25vmin}
   body.has-pip .bagline{font-size:4.8vmin; margin-top:1.8vmin}
-  body.has-pip .under{font-size:3vmin}
+  body.has-pip .under{font-size:3vmin} body.has-pip .alt{font-size:2.6vmin}
 }
 
 /* ---------- night feed screen (dim red, for 3 am) ---------- */
@@ -452,7 +453,7 @@ body.night .dots .dot.on{opacity:.45}
   .clock{font-size:6vmin} .date{font-size:4vmin} .pill{font-size:3.6vmin}
   .kicker{font-size:4.6vmin} .temp{font-size:30vmin} .trend{font-size:5vmin} .facts{font-size:4.4vmin}
   .figures{height:58vmin} .garments svg{width:21vmin} .garments.two svg{width:17vmin}
-  .bagline{font-size:8vmin} .under{font-size:5vmin} .note{font-size:4.4vmin} .basis{font-size:3.8vmin}
+  .bagline{font-size:8vmin} .under{font-size:5vmin} .alt{font-size:4.2vmin} .note{font-size:4.4vmin} .basis{font-size:3.8vmin}
   .today{flex-wrap:wrap} .today .item{flex:1 1 45%; padding:0 0 3vmin; border-left:0 !important}
   .today .k, .today .s{font-size:3.6vmin} .today .v{font-size:5vmin}
   .tonight .head, .tl-group, .tl-t{font-size:3.2vmin} .tl-hour{font-size:3vmin} .tl{--barmax:12vmin}
@@ -704,6 +705,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     </div>
     <p class="bagline" id="bagline">Getting the weather</p>
     <p class="under" id="under">&nbsp;</p>
+    <p class="alt" id="alt" hidden></p>
     <p class="note" id="note" hidden></p>
     <p class="basis" id="basis" hidden></p>
   </section>
@@ -1044,7 +1046,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   var el = {
     stage: $('stage'), clock: $('clock'), date: $('date'), pill: $('pill'),
     kicker: $('kicker'), tnum: $('tnum'), trend: $('trend'), room: $('room'), hum: $('hum'), updated: $('updated'),
-    garments: $('garments'), bagbox: $('bagbox'), bagline: $('bagline'), under: $('under'), note: $('note'), basis: $('basis'),
+    garments: $('garments'), bagbox: $('bagbox'), bagline: $('bagline'), under: $('under'), alt: $('alt'), note: $('note'), basis: $('basis'),
     today: $('today'), tonight: $('tonight'), tlTitle: $('tl-title'), tlNote: $('tl-note'), tl: $('tl'), tip: $('tip'),
     controls: $('controls'), lookBtn: $('lookBtn'),
     light: $('light'), lightControls: $('lightControls'), lightLevel: $('lightLevel'), lightEnds: $('lightEnds'),
@@ -1197,13 +1199,17 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   var STATES = [
     { min: 27, max: Infinity, zone: 'hot', tog: '0.2', wear: ['nappy'], under: 'Just a nappy underneath', note: 'Very warm. Cool the room if you can.' },
     { min: 24, max: 27, zone: 'warm', tog: '0.2', wear: ['ss'], under: 'Short-sleeve bodysuit underneath' },
-    { min: 22, max: 24, zone: 'mild', tog: '1.0', wear: ['ss'], under: 'Short-sleeve bodysuit underneath' },
-    { min: 20, max: 22, zone: 'mild', tog: '1.0', wear: ['ls'], under: 'Long-sleeve bodysuit underneath' },
+    { min: 22, max: 24, zone: 'mild', tog: '1.0', wear: ['ss'], under: 'Short-sleeve bodysuit underneath',
+      alts: [{ tog: null, text: 'No bag: short-sleeve bodysuit with a light blanket tucked in firmly' }] },
+    { min: 20, max: 22, zone: 'mild', tog: '1.0', wear: ['ls'], under: 'Long-sleeve bodysuit underneath',
+      alts: [{ tog: '0.2', text: '0.2 TOG bag with a long-sleeve bodysuit and growsuit underneath' },
+             { tog: null, text: 'No bag: long-sleeve bodysuit and growsuit with a light blanket tucked in firmly' }] },
     { min: 18, max: 20, zone: 'cool', tog: '2.5', wear: ['ls'], under: 'Long-sleeve bodysuit underneath' },
     { min: 16, max: 18, zone: 'cool', tog: '2.5', wear: ['grow'], under: 'Growsuit underneath' },
     { min: -Infinity, max: 16, zone: 'cold', tog: '3.5', wear: ['ls', 'grow'], under: 'Long-sleeve bodysuit and growsuit underneath' }
   ];
   var HYSTERESIS = 0.3; // stops the advice flicking back and forth right on a boundary
+  var ROOM_FOLLOW = 0.5; // how much of an outside swing reaches the room overnight (0 = none, 1 = all of it)
   function bandFor(t, prev) {
     if (prev && t >= prev.min - HYSTERESIS && t < prev.max + HYSTERESIS) return prev;
     for (var i = 0; i < STATES.length; i++) if (t >= STATES[i].min && t < STATES[i].max) return STATES[i];
@@ -1212,6 +1218,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   // Adjust for the bags they actually own.
   function outfitFor(state) {
     var o = { zone: state.zone, tog: state.tog, wear: state.wear, under: state.under, note: state.note || null };
+    // "Or" options, only the bag ones you actually have
+    o.alts = (state.alts || []).filter(function (a) { return !a.tog || settings.bags[a.tog]; }).map(function (a) { return 'Or ' + a.text.charAt(0).toLowerCase() + a.text.slice(1); });
     if (state.tog === '3.5' && !settings.bags['3.5'] && settings.bags['2.5']) {
       o.tog = '2.5'; o.wear = ['ls', 'grow'];
       o.under = 'Long-sleeve bodysuit and growsuit underneath';
@@ -1384,21 +1392,24 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     var live = reading(now, true);
     if (span.length && live && live.source === 'outside') span[0] = { ms: span[0].ms, temp: live.temp }; // "Now" matches the big number
     var adj = podMode ? 0 : (settings.offset || 0);
-    var key = mode + '|' + span.map(function (x) { return Math.round(x.temp * 10); }).join(',') + '|' + adj + '|' + JSON.stringify(settings.bags) + '|' + (span[0] ? span[0].ms : '');
-    setText(el.tlTitle, (end > morning ? 'Tonight' : 'Next 12 hours') + (adj ? ', room estimate' : ', outside'));
+    // With the room sensor live, start from the real room temperature and let it follow the forecast part of the way.
+    var rd = reading(now), fromRoom = !podMode && rd && rd.source === 'pod' && live && live.source === 'outside';
+    var guess = function (v) { return fromRoom ? rd.temp + ROOM_FOLLOW * (v - live.temp) : v + adj; };
+    var key = mode + '|' + span.map(function (x) { return Math.round(x.temp * 10); }).join(',') + '|' + adj + '|' + (fromRoom ? Math.round(rd.temp * 10) + '/' + Math.round(live.temp * 10) : '') + '|' + JSON.stringify(settings.bags) + '|' + (span[0] ? span[0].ms : '');
+    setText(el.tlTitle, (end > morning ? 'Tonight' : 'Next 12 hours') + (adj || fromRoom ? ', room estimate' : ', outside'));
     if (key === tlKey) return;
     tlKey = key;
     if (!span.length) { el.tl.innerHTML = ''; setText(el.tlNote, 'No forecast'); return; }
 
-    var lo = minOf(span).temp, hi = maxOf(span).temp, range = Math.max(4, hi - lo);
+    var lo = guess(minOf(span).temp), hi = guess(maxOf(span).temp), range = Math.max(4, hi - lo);
     var prev = null, groups = [], html = '';
     span.forEach(function (x, i) {
-      var t = x.temp + adj;
+      var t = guess(x.temp);
       prev = bandFor(t, prev);
       var o = outfitFor(prev);
       if (!groups.length || groups[groups.length - 1].tog !== o.tog) groups.push({ tog: o.tog, from: i, to: i });
       else groups[groups.length - 1].to = i;
-      var frac = (0.28 + 0.72 * (x.temp - lo) / range).toFixed(2);
+      var frac = (0.28 + 0.72 * (t - lo) / range).toFixed(2);
       var barStyle = 'height:calc(var(--barmax) * ' + frac + ')' + (mode === 'night' ? '' : ';background:var(--c-' + prev.zone + ')');
       html += '<div class="tl-col' + (i === 0 ? ' now' : '') + '" style="grid-column:' + (i + 1) + '">' +
         '<p class="tl-t">' + deg(t) + '</p><div class="tl-bar" style="' + barStyle + '"></div></div>' +
@@ -1411,7 +1422,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     el.tl.innerHTML = html;
     var coldest = minOf(span);
     setText(el.tlNote, groups.length > 1 ? groups[1].tog + ' TOG from about ' + hourWord(span[groups[1].from].ms)
-      : 'Coldest ' + deg(coldest.temp + adj) + ' around ' + hourWord(coldest.ms));
+      : 'Coldest ' + deg(guess(coldest.temp)) + ' around ' + hourWord(coldest.ms));
   }
 
   var tipIndex = 0;
@@ -1488,6 +1499,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     }
     setText(el.bagline, o.tog + ' TOG bag');
     setText(el.under, o.under);
+    show(el.alt, o.alts.length > 0);
+    if (o.alts.length) setText(el.alt, o.alts.join('\n'));
     show(el.note, !!o.note);
     if (o.note) setText(el.note, o.note);
     if (r.source === 'outside') {
