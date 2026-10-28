@@ -15,6 +15,22 @@ An always-on screen for the nursery, built for an Amazon Echo Show 8 running Lin
 - Home: the family calendar, the photos, the weather and the baby at a glance, with the nursery screen one swipe away (see Pages).
 - Family: the next two weeks of everyone's calendars, one colour per person, and a full screen photo frame you start by tapping the Home photo (see below).
 
+## What to wear
+
+The bag and layers follow the ergoPouch Room Thermometer and What To Wear Guide, one row per 2 degrees. A temperature uses the nearest row (25 and over is the 26 row, 23 to 25 is the 24 row, and so on down to 15 and under). The main line is the first option on the card's row (the lightest bag), and the "Or" lines are the other bag on the same row, then a blanket version.
+
+| Row | Main | Or |
+| --- | --- | --- |
+| 26 and over | 0.2 bag, nappy | |
+| 24 | 0.2 bag, short-sleeve bodysuit | 1.0 bag, nappy |
+| 22 | 0.2 bag, 1.0 growsuit | 1.0 bag, 0.2 growsuit |
+| 20 | 1.0 bag, 1.0 growsuit, singlet | 2.5 bag, 0.2 growsuit |
+| 18 | 2.5 bag, 1.0 growsuit | 3.5 bag, 0.2 growsuit |
+| 16 | 2.5 bag, 1.0 growsuit, singlet | 3.5 bag, 0.2 growsuit, singlet |
+| 14 and under | 3.5 bag, 1.0 growsuit, singlet | |
+
+Blankets are not on the card. The rule used is that one light cotton or muslin blanket stands in for a 0.2 TOG layer, so a 0.2 TOG growsuit (or a long-sleeve bodysuit) can be a short-sleeve bodysuit plus a light blanket, tucked in firmly. Red Nose says blankets over a sleeping bag are not generally needed and can add to overheating or cover the face, so the bag and layers are the first choice. Only the bags ticked in Settings are used, and the rows and rules are in `STATES` in `index.html`.
+
 ## Pages
 
 The screen has three pages. It opens on **Home**: the clock and date, the weather now and for the day, what is coming up on the family calendar, a shuffled slideshow of the family photos, and the baby at a glance. **Swipe left once** for the nursery screen (the temperature, TOG bag and layers, the baby band and tonight's temperatures). **Swipe left again** for the **Baby** page, the full tracker. Swipe right to go back. The dots at the bottom show which page you are on and can be tapped, and on a laptop the arrow keys work too.

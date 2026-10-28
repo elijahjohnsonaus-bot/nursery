@@ -21,7 +21,7 @@
     data.json from the pod every 30 seconds: {"temp": 19.4, "hum": 52} and uses the real
     room temperature instead.
 
-  Advice follows ergoPouch's TOG ranges: 0.2 TOG 24-27, 1.0 TOG 20-24, 2.5 TOG 16-20, 3.5 TOG under 16.
+  Advice follows the ergoPouch Room Thermometer and What To Wear Guide, one row per 2 degrees (see STATES).
   UV advice: Cancer Council (babies under 12 months out of direct sun at UV 3+).
   Air: NSW air quality categories for PM2.5 (1-hour), advice for sensitive groups.
 
@@ -140,6 +140,8 @@ body.blank .under{font-size:4vmin}
 .tag-num{font-size:37px; font-weight:600; fill:var(--ink)}
 .tag-unit{font-size:15px; font-weight:500; fill:var(--ink); letter-spacing:.06em}
 .garment{fill:var(--paper); stroke:var(--ink); stroke-width:2.6; stroke-linejoin:round}
+.g-tag{fill:var(--paper); stroke:var(--ink); stroke-width:1.6}
+.g-tog{font-size:17px; font-weight:600; fill:var(--ink)}
 .detail{fill:none; stroke:var(--ink); stroke-width:2; stroke-linecap:round}
 .detail.dash{stroke-dasharray:3 4}
 body.night .bag-body{fill:#000}
@@ -150,6 +152,8 @@ body.night .zip, body.night .detail, body.night .pull{stroke:var(--amber-dim)}
 body.night .stud{fill:var(--amber-dim)}
 body.night .tag{fill:#000; stroke:var(--amber-dim)}
 body.night .tag-num, body.night .tag-unit{fill:var(--amber)}
+body.night .g-tag{fill:#000; stroke:var(--amber-dim)}
+body.night .g-tog{fill:var(--amber)}
 
 /* bottom strip: Today (day look) or Tonight timeline (night look) */
 .strip{grid-area:strip; min-height:15vmin}
@@ -911,7 +915,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
         <button class="chip" data-bag="2.5">2.5 TOG</button>
         <button class="chip" data-bag="3.5">3.5 TOG</button>
       </div>
-      <p class="hint">Without a 3.5 TOG bag, cold nights use the 2.5 TOG with an extra layer.</p>
+      <p class="hint">Each row of the ergoPouch card lists up to two bags. The screen uses the ones you have. Without a 3.5 TOG bag, cold nights use the 2.5 TOG with an extra layer or a light blanket.</p>
     </div>
 
     <div class="set">
@@ -957,7 +961,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 (function () {
   'use strict';
 
-  var VERSION = '21 Oct 2026, v13';
+  var VERSION = '28 Oct 2026, v14';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -1195,41 +1199,77 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     71: 'Snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow', 80: 'Showers', 81: 'Showers', 82: 'Heavy showers',
     85: 'Snow showers', 86: 'Snow showers', 95: 'Thunderstorms', 96: 'Thunderstorms, hail', 99: 'Thunderstorms, hail' };
 
-  // ---------- advice (ergoPouch TOG ranges) ----------
+  // ---------- advice (ergoPouch "Room Thermometer and What To Wear Guide") ----------
+  // One row per 2 degrees, as printed on the card. Each row lists the pouch and layer combinations the card gives,
+  // left to right (lightest pouch first). A temperature uses the nearest row: 25 and over is the 26 row, 23 to 25 is
+  // the 24 row, and so on down to 15 and under, which is the 14 row.
+  // Layers: nappy, ss (short-sleeve bodysuit), g2 (0.2 TOG growsuit), g10 (1.0 TOG growsuit), vest (singlet).
+  // Blankets are not on the card. Rule of thumb used here: one light cotton or muslin blanket stands in for a 0.2 TOG
+  // layer, so a 0.2 TOG growsuit (or a long-sleeve bodysuit) can become a short-sleeve bodysuit plus a light blanket.
   var STATES = [
-    { min: 27, max: Infinity, zone: 'hot', tog: '0.2', wear: ['nappy'], under: 'Just a nappy underneath', note: 'Very warm. Cool the room if you can.' },
-    { min: 24, max: 27, zone: 'warm', tog: '0.2', wear: ['ss'], under: 'Short-sleeve bodysuit underneath' },
-    { min: 22, max: 24, zone: 'mild', tog: '1.0', wear: ['ss'], under: 'Short-sleeve bodysuit underneath',
-      alts: [{ tog: '0.2', text: '0.2 TOG bag with a short-sleeve bodysuit and a light blanket tucked in firmly' }] },
-    { min: 20, max: 22, zone: 'mild', tog: '1.0', wear: ['ls'], under: 'Long-sleeve bodysuit underneath',
-      alts: [{ tog: '1.0', text: '1.0 TOG bag with a short-sleeve bodysuit and a light blanket tucked in firmly' }] },
-    { min: 18, max: 20, zone: 'cool', tog: '2.5', wear: ['ls'], under: 'Long-sleeve bodysuit underneath',
-      alts: [{ tog: '2.5', text: '2.5 TOG bag with a short-sleeve bodysuit and a light blanket tucked in firmly' }] },
-    { min: 16, max: 18, zone: 'cool', tog: '2.5', wear: ['grow'], under: 'Growsuit underneath',
-      alts: [{ tog: '2.5', text: '2.5 TOG bag with a long-sleeve bodysuit and a light blanket tucked in firmly' }] },
-    { min: -Infinity, max: 16, zone: 'cold', tog: '3.5', wear: ['ls', 'grow'], under: 'Long-sleeve bodysuit and growsuit underneath',
-      alts: [{ tog: '2.5', needs: '3.5', text: '2.5 TOG bag with a long-sleeve bodysuit, growsuit and a light blanket tucked in firmly' }] }
+    { min: 27, max: Infinity, zone: 'hot', note: 'Very warm. Cool the room if you can.',
+      opts: [{ bag: '0.2', wear: ['nappy'] }] },
+    { min: 25, max: 27, zone: 'warm',
+      opts: [{ bag: '0.2', wear: ['nappy'] }] },
+    { min: 23, max: 25, zone: 'warm',
+      opts: [{ bag: '0.2', wear: ['ss'] }, { bag: '1.0', wear: ['nappy'] }] },
+    { min: 21, max: 23, zone: 'mild',
+      opts: [{ bag: '0.2', wear: ['g10'] }, { bag: '1.0', wear: ['g2'] }] },
+    { min: 19, max: 21, zone: 'mild',
+      opts: [{ bag: '1.0', wear: ['g10', 'vest'] }, { bag: '2.5', wear: ['g2'] }] },
+    { min: 17, max: 19, zone: 'cool',
+      opts: [{ bag: '2.5', wear: ['g10'] }, { bag: '3.5', wear: ['g2'] }] },
+    { min: 15, max: 17, zone: 'cool',
+      opts: [{ bag: '2.5', wear: ['g10', 'vest'] }, { bag: '3.5', wear: ['g2', 'vest'] }] },
+    { min: -Infinity, max: 15, zone: 'cold', note: 'Coldest row on the card. Check bub’s tummy, and add a light blanket tucked in firmly if it feels cool.',
+      opts: [{ bag: '3.5', wear: ['g10', 'vest'] }] }
   ];
   var HYSTERESIS = 0.3; // stops the advice flicking back and forth right on a boundary
   var ROOM_FOLLOW = 0.5; // how much of an outside swing reaches the room overnight (0 = none, 1 = all of it)
+  var ALL_BAGS = ['0.2', '1.0', '2.5', '3.5'];
+  var LAYER_NAME = { nappy: 'nappy', ss: 'short-sleeve bodysuit', g2: '0.2 TOG growsuit (or long-sleeve bodysuit)', g10: '1.0 TOG growsuit', vest: 'singlet' };
+  var LAYER_WITH = { ss: 'a short-sleeve bodysuit', g2: 'a 0.2 TOG growsuit', g10: 'a 1.0 TOG growsuit', vest: 'a singlet' };
   function bandFor(t, prev) {
     if (prev && t >= prev.min - HYSTERESIS && t < prev.max + HYSTERESIS) return prev;
     for (var i = 0; i < STATES.length; i++) if (t >= STATES[i].min && t < STATES[i].max) return STATES[i];
     return STATES[STATES.length - 1];
   }
-  // Adjust for the bags they actually own.
+  function joinList(a) { return a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0]; }
+  function underText(wear) {
+    if (wear.length === 1 && wear[0] === 'nappy') return 'Just a nappy underneath';
+    var s = joinList(wear.map(function (w) { return LAYER_NAME[w]; }));
+    return s.charAt(0).toUpperCase() + s.slice(1) + ' underneath';
+  }
+  function comboText(c) {
+    if (c.wear.length === 1 && c.wear[0] === 'nappy') return c.bag + ' TOG bag with just a nappy';
+    return c.bag + ' TOG bag with ' + joinList(c.wear.map(function (w) { return LAYER_WITH[w]; }));
+  }
+  // The 0.2 TOG growsuit becomes a short-sleeve bodysuit plus a light blanket; anything else (a singlet) stays.
+  function blanketText(c) {
+    var wear = c.wear.map(function (w) { return w === 'g2' ? 'ss' : w; });
+    return c.bag + ' TOG bag with ' + joinList(wear.map(function (w) { return LAYER_WITH[w]; }).concat(['a light blanket tucked in firmly']));
+  }
+  // Adjust for the bags they actually own. The first option they have is the main one; the other options on the
+  // same row of the card, and a blanket version, come up as "Or" lines.
   function outfitFor(state) {
-    var o = { zone: state.zone, tog: state.tog, wear: state.wear, under: state.under, note: state.note || null };
-    // "Or" options, only the bag ones you actually have
-    o.alts = (state.alts || []).filter(function (a) { return (!a.tog || settings.bags[a.tog]) && (!a.needs || settings.bags[a.needs]); }).map(function (a) { return 'Or ' + a.text.charAt(0).toLowerCase() + a.text.slice(1); });
-    if (state.tog === '3.5' && !settings.bags['3.5'] && settings.bags['2.5']) {
-      o.tog = '2.5'; o.wear = ['ls', 'grow'];
-      o.under = 'Long-sleeve bodysuit and growsuit underneath';
-      o.note = 'No 3.5 TOG bag, so add the extra layer.';
-    } else if (!settings.bags[state.tog]) {
-      o.note = 'You don’t have a ' + state.tog + ' TOG bag set in Settings.';
+    var owned = state.opts.filter(function (c) { return settings.bags[c.bag]; });
+    var main = owned[0], note = state.note || null;
+    if (!main) {
+      // None of this row's bags are set in Settings: use the nearest bag they do have, with the card's first layers.
+      var want = state.opts[0], wt = +want.bag, best = null;
+      ALL_BAGS.forEach(function (k) {
+        if (settings.bags[k] && (best === null || Math.abs(+k - wt) < Math.abs(+best - wt))) best = k;
+      });
+      if (best === null) best = want.bag;
+      main = { bag: best, wear: want.wear };
+      owned = [main];
+      if (+best < wt) note = 'No ' + want.bag + ' TOG bag, so add a layer or a light blanket tucked in firmly.';
+      else if (+best > wt) note = 'No ' + want.bag + ' TOG bag, so ' + best + ' TOG will run warm. Keep the layers light and check bub’s tummy.';
     }
-    return o;
+    var alts = owned.slice(1).map(function (c) { return 'Or ' + comboText(c); });
+    var swap = owned.filter(function (c) { return c.wear.indexOf('g2') >= 0; })[0];
+    if (swap) alts.push('Or ' + blanketText(swap));
+    return { zone: state.zone, tog: main.bag, wear: main.wear, under: underText(main.wear), note: note, alts: alts };
   }
   function adviceTemp(r) { return r.source === 'pod' ? r.temp : r.temp + (settings.offset || 0); }
 
@@ -1266,14 +1306,22 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     grow: { label: 'Growsuit',
       d: 'M46 10 L26 15 L9 62 L21 67 L34 35 L35 74 L31 110 Q30 124 44 124 L53 124 Q56 124 56 120 L58 82 L62 82 L64 120 Q64 124 67 124 L76 124 Q90 124 89 110 L85 74 L86 35 L99 67 L111 62 L94 15 L74 10 Q60 25 46 10 Z',
       extra: '<path class="detail dash" d="M60 26 V78"/><path class="detail" d="M32 111 L55 111 M65 111 L88 111 M11 56 L23 61 M109 56 L97 61"/>' },
+    vest: { label: 'Singlet',
+      d: 'M42 10 L51 10 Q60 34 69 10 L78 10 L78 32 Q78 48 90 54 L88 104 Q88 112 78 114 L74 122 L46 122 L42 114 Q32 112 32 104 L30 54 Q42 48 42 32 Z',
+      extra: '<circle class="stud" cx="55" cy="117" r="1.8"/><circle class="stud" cx="60" cy="117" r="1.8"/><circle class="stud" cx="65" cy="117" r="1.8"/>' },
     nappy: { label: 'Nappy', vb: '0 30 120 76',
       d: 'M14 40 L106 40 L106 52 L98 55 Q93 90 60 98 Q27 90 22 55 L14 52 Z',
       extra: '<path class="detail dash" d="M20 47 H100"/>' }
   };
+  // The card shows the TOG on each growsuit, so the drawing does too.
+  GARMENTS.g2 = { label: '0.2 TOG growsuit', d: GARMENTS.grow.d, extra: GARMENTS.grow.extra, tag: '0.2' };
+  GARMENTS.g10 = { label: '1.0 TOG growsuit', d: GARMENTS.grow.d, extra: GARMENTS.grow.extra, tag: '1.0' };
   function garmentSVG(key) {
     var g = GARMENTS[key];
+    var tag = g.tag ? '<rect class="g-tag" x="41" y="44" width="38" height="24" rx="5"/>' +
+      '<text class="g-tog" x="60" y="62" text-anchor="middle">' + g.tag + '</text>' : '';
     return '<svg viewBox="' + (g.vb || '0 0 120 130') + '" role="img" aria-label="' + g.label + '">' +
-      '<path class="garment" d="' + g.d + '"/>' + g.extra + '</svg>';
+      '<path class="garment" d="' + g.d + '"/>' + g.extra + tag + '</svg>';
   }
 
   // ---------- day and night looks ----------
