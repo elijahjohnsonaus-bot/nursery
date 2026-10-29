@@ -2925,7 +2925,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     show($('syncLock'), !!sync.pass || sync.status === 'pass');
     var t;
     if (sync.status === 'ok' && syncOn()) t = (sync.pass ? 'Shared. ' : 'Shared with every screen that opens this address. ') + 'Last checked ' + clockText(new Date(sync.last)) + '.';
-    else if (sync.status === 'pass') t = sync.pass ? 'That doesn’t match the passcode set in Netlify (NURSERY_PASSCODE).' : 'This site is locked with a passcode (NURSERY_PASSCODE in Netlify). Enter it below once on this screen to share settings.';
+    else if (sync.status === 'pass') t = sync.pass ? 'That doesn’t match the passcode set in Cloudflare (NURSERY_PASSCODE).' : 'This site is locked with a passcode (NURSERY_PASSCODE in Cloudflare). Enter it below once on this screen to share settings.';
     else if (sync.status === 'setup') t = 'The server isn’t ready yet. Try again once the site has finished redeploying.';
     else if (sync.status === 'missing') t = 'This site doesn’t have the sharing function yet. Redeploy it from GitHub.';
     else if (sync.status === 'offline') t = 'Can’t reach the server. It will try again.';
@@ -3013,9 +3013,9 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   function calStatusText() {
     var st = Cal.status;
     if (st === 'nopass') return famNoText();
-    if (st === 'pass') return 'The nursery passcode doesn’t match the one in Netlify. Check Settings, Shared settings.';
+    if (st === 'pass') return 'The nursery passcode doesn’t match the one in Cloudflare. Check Settings, Shared settings.';
     if (st === 'setup') return 'The server isn’t ready yet. Try again once the site has finished redeploying.';
-    if (st === 'nofeeds') return 'No calendars yet. In Netlify add CALENDAR_FEEDS, one line per person like Name|webcal://…, and redeploy.';
+    if (st === 'nofeeds') return 'No calendars yet. In Cloudflare, open the nursery Worker, then Settings, Variables and secrets, and add a secret called CALENDAR_FEEDS with one line per person like Name|link. Google users: use the Secret address in iCal format.';
     if (st === 'missing') return 'This site doesn’t have the calendar function yet. Redeploy it from GitHub.';
     if (st === 'error') return 'The server gave an unexpected answer' + (Cal.code ? ' (error ' + Cal.code + ')' : '') + '.';
     if (st === 'offline') return 'Can’t reach the server.' + (Cal.at ? ' Showing the calendar as it was at ' + clockText(new Date(Cal.at)) + '.' : '');
@@ -3239,7 +3239,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       tileCheck();
     }).catch(function (e) {
       if (!e) return;
-      famMsg(e && e.status === 401 ? 'The nursery passcode doesn’t match the one in Netlify.' :
+      famMsg(e && e.status === 401 ? 'The nursery passcode doesn’t match the one in Cloudflare.' :
         e && e.status === 503 ? 'The server isn’t ready yet. Try again once the site has finished redeploying.' :
         e && e.status === 404 ? 'This site doesn’t have the photos function yet. Redeploy it from GitHub.' : 'Can’t load the photos. Check the connection.');
     }).then(function () { Frame.loading = false; });
@@ -3277,7 +3277,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (e && e.message === 'pass') return famNoText();
     if (c === 'full') return 'The gallery is full (300 photos). Delete some first.';
     if (c === 'too-big') return (name || 'A photo') + ' is still too big after shrinking.';
-    if (s === 401) return 'The nursery passcode doesn’t match the one in Netlify.';
+    if (s === 401) return 'The nursery passcode doesn’t match the one in Cloudflare.';
     if (s === 503) return 'The server isn’t ready yet. Try again once the site has finished redeploying.';
     if (s === 404) return 'This site doesn’t have the photos function yet. Redeploy it from GitHub.';
     if (name) return name + ' could not be added.';
@@ -3606,7 +3606,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       });
     }).catch(function (e) {
       Tile.retryAt = Date.now() + 60000;
-      tileSay(e && e.status === 401 ? 'The nursery passcode doesn’t match the one in Netlify.' :
+      tileSay(e && e.status === 401 ? 'The nursery passcode doesn’t match the one in Cloudflare.' :
         e && e.status === 404 ? 'This site doesn’t have the photos function yet. Redeploy it from GitHub.' : 'Can’t load the photos.');
     }).then(function () { Tile.loading = false; });
   }
@@ -3953,7 +3953,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     // (leaving a typed field saves it and would otherwise redraw the button out from under the tap).
     if (Baby.press && !force) { Baby.late = true; return; }
     if (!pipOn()) {
-      bEl.body.innerHTML = '<div class="b-wide"><div class="b-none">The baby tracker needs this site’s own address (the one on Netlify), not the sensor pod’s.</div></div>';
+      bEl.body.innerHTML = '<div class="b-wide"><div class="b-none">The baby tracker needs this site’s own address (the nursery site’s own address), not the sensor pod’s.</div></div>';
       Baby.html = '';
       return;
     }
