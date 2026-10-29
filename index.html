@@ -363,6 +363,14 @@ body.night .cal-ev{background:transparent}
 .cal-bar{width:1.8vmin; flex:none}
 body.night .cal-bar{filter:brightness(.6)}
 body.night .cal-dot{filter:brightness(.6)}
+/* Rainbow colour: the stripe has white glints that twinkle. Only opacity moves, so it stays light on the Echo. */
+.cal-bar.rainbow, .cal-dot.rainbow{position:relative; overflow:hidden}
+.cal-bar.rainbow::before, .cal-bar.rainbow::after, .cal-dot.rainbow::before, .cal-dot.rainbow::after{content:""; position:absolute; top:0; right:0; bottom:0; left:0; opacity:0; animation:twinkle 2.4s ease-in-out infinite}
+.cal-bar.rainbow::before, .cal-dot.rainbow::before{background:linear-gradient(180deg,transparent 6%,rgba(255,255,255,.95) 14%,transparent 22%,transparent 52%,rgba(255,255,255,.9) 60%,transparent 68%); animation-delay:var(--tw,0s)}
+.cal-bar.rainbow::after, .cal-dot.rainbow::after{background:linear-gradient(180deg,transparent 30%,rgba(255,255,255,.95) 38%,transparent 46%,transparent 76%,rgba(255,255,255,.9) 84%,transparent 92%); animation-duration:3.1s; animation-delay:calc(var(--tw,0s) + .9s)}
+@keyframes twinkle{0%,100%{opacity:0} 45%,55%{opacity:1}}
+body.night .cal-bar.rainbow::before, body.night .cal-bar.rainbow::after, body.night .cal-dot.rainbow::before, body.night .cal-dot.rainbow::after{animation:none}
+@media (prefers-reduced-motion:reduce){.cal-bar.rainbow::before, .cal-bar.rainbow::after, .cal-dot.rainbow::before, .cal-dot.rainbow::after{animation:none}}
 .cal-t{font-size:3vmin; font-weight:500; width:25vmin; flex:none; padding:1.5vmin 2vmin; color:var(--ink-soft)}
 .cal-t small{display:block; font-size:2.4vmin; font-weight:400; margin-top:.2vmin}
 .cal-b{flex:1; min-width:0; padding:1.4vmin 2vmin 1.4vmin 0}
@@ -2970,6 +2978,12 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   }
   function famMsg(t) { setText(el.famMsg, t); show(el.famMsg, !!t); }
   function hexOk(c) { return /^#[0-9a-f]{3,8}$/i.test(c || ''); }
+  // A person's colour can be a hex colour or the word rainbow (a red to purple stripe).
+  var RAINBOW = 'linear-gradient(180deg,#E03C3C,#F08A24,#F2C61F,#3FAE49,#2E72B2,#7A5BB5)';
+  function paint(el, c) {
+    if (c === 'rainbow') { el.style.background = RAINBOW; el.classList.add('rainbow'); el.style.setProperty('--tw', (Math.random() * 2.4).toFixed(2) + 's'); }
+    else if (hexOk(c)) el.style.background = c;
+  }
   function addDays(ms, n) { var x = new Date(ms); x.setDate(x.getDate() + n); return x.getTime(); }
   function dayMs(s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).getTime(); }
 
@@ -3029,7 +3043,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   // One event as a row: person's colour bar, the time, the title and where.
   function calEvent(r, day, now) {
     var ev = document.createElement('div'); ev.className = 'cal-ev' + (!r.allDay && r.end < now.getTime() ? ' past' : '');
-    var bar = document.createElement('span'); bar.className = 'cal-bar'; if (hexOk(r.color)) bar.style.background = r.color;
+    var bar = document.createElement('span'); bar.className = 'cal-bar'; paint(bar, r.color);
     var tm = document.createElement('span'); tm.className = 'cal-t';
     if (r.allDay) tm.textContent = 'All day';
     else {
@@ -3081,7 +3095,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (!d) return;
     (d.feeds || []).forEach(function (f) {
       var k = document.createElement('span'); k.className = 'cal-key' + (f.ok ? '' : ' bad');
-      var dot = document.createElement('i'); dot.className = 'cal-dot'; if (hexOk(f.color)) dot.style.background = f.color;
+      var dot = document.createElement('i'); dot.className = 'cal-dot'; paint(dot, f.color);
       k.appendChild(dot); k.appendChild(document.createTextNode(f.name));
       el.calLegend.appendChild(k);
     });

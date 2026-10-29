@@ -12,7 +12,8 @@ import { parseEvents, trimFeed, expand, safeTz, zonedToUtc, zonedDate, dayNum, d
 //   CALENDAR_FEEDS = Elijah|#2E72B2|https://calendar.google.com/calendar/ical/.../private-.../basic.ics
 //                    Molly|#C2548A|webcal://p12-caldav.icloud.com/published/2/BBBB
 //
-// Separate people with a new line or a semicolon. The colour is optional (a person without one gets the
+// Separate people with a new line or a semicolon. The colour can be a hex colour or the word rainbow,
+// and is optional (a person without one gets the
 // next colour in the list below). CALENDAR_TZ sets the time zone (default Australia/Sydney).
 // Like everything else here it is open unless NURSERY_PASSCODE is set, which locks it. While it is open
 // anyone who has the site's address can see the calendar.
@@ -34,7 +35,7 @@ function feeds() {
       ok = u.protocol === 'https:' || (u.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(u.hostname));
     } catch { /* not a link */ }
     if (!ok) continue;
-    const colour = parts.length >= 3 && /^#[0-9a-f]{3,8}$/i.test(parts[1]) ? parts[1] : null;
+    const colour = parts.length >= 3 && /^(#[0-9a-f]{3,8}|rainbow)$/i.test(parts[1]) ? parts[1].toLowerCase() : null;
     const name = (parts.length >= 2 ? parts[0] : '') || `Calendar ${out.length + 1}`;
     out.push({ name: name.slice(0, 40), color: colour || PALETTE[out.length % PALETTE.length], url });
   }
