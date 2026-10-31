@@ -109,6 +109,9 @@ body.night :focus-visible{outline-color:var(--amber)}
 .temp .deg{font-size:.42em; font-weight:400; margin:.06em 0 0 .03em}
 .trend{font-size:3.6vmin; font-weight:500; margin-top:2.4vmin}
 .facts{margin-top:2.2vmin; font-size:3vmin; line-height:1.5; color:var(--ink-soft)}
+#checkRow{margin-top:1.4vmin}
+.checkmsg{font-size:2.6vmin; margin-left:1.8vmin}
+#checkBtn:disabled{opacity:.6}
 
 .outfit{grid-area:outfit; display:flex; flex-direction:column; justify-content:center; min-height:0}
 .figures{display:flex; align-items:flex-end; height:32vmin}
@@ -342,6 +345,18 @@ body.night .logscr .lbl, body.night .logscr .hint, body.night .logscr .muted{col
 .logtoast button{margin-left:3vmin; min-height:7vmin; padding:.8vmin 2.4vmin; font-size:3.2vmin; font-weight:600; background:transparent; border:.3vmin solid currentColor; border-radius:1.6vmin}
 .logtoast.red{background:#1C0704; color:#E04A2E; border:.3vmin solid #7A2214}
 
+/* ---------- going out ---------- */
+.go-tabs{margin-bottom:2.4vmin}
+.go-now{font-size:3.2vmin; color:var(--ink-soft); margin-bottom:2.6vmin}
+.go-list{list-style:none; margin:0 0 3.4vmin}
+.go-list li{font-size:3.8vmin; line-height:1.3; padding:1.2vmin 0; border-bottom:.2vmin solid var(--line)}
+.go-list li:last-child{border-bottom:0}
+.go-or{font-size:3vmin; line-height:1.35; color:var(--ink-soft); margin:-1.6vmin 0 3.4vmin; white-space:pre-line}
+.go-note{font-size:3.2vmin; font-weight:500; margin-bottom:3vmin; color:var(--accent)}
+.go-tips li{font-size:3vmin; color:var(--ink-soft)}
+body.night .go-now, body.night .go-or, body.night .go-tips li{color:var(--amber-dim)}
+body.night .go-note{color:var(--amber)}
+
 /* ---------- controls bar: room for one more button ---------- */
 .controls{flex-wrap:wrap}
 .controls .btn{margin:.6vmin .8vmin; min-width:0; padding:1.4vmin 2.4vmin; font-size:3vmin}
@@ -463,7 +478,8 @@ body.night .dots .dot.on{opacity:.45}
     grid-template-areas:"top" "reading" "outfit" "strip" "tip"}
   body.blank .outfit{grid-column:auto}
   .clock{font-size:6vmin} .date{font-size:4vmin} .pill{font-size:3.6vmin}
-  .kicker{font-size:4.6vmin} .temp{font-size:30vmin} .trend{font-size:5vmin} .facts{font-size:4.4vmin}
+  .kicker{font-size:4.6vmin} .temp{font-size:30vmin} .trend{font-size:5vmin} .facts{font-size:4.4vmin} .checkmsg{font-size:3.8vmin}
+  .go-now{font-size:4.4vmin} .go-list li{font-size:5vmin} .go-or{font-size:4.2vmin} .go-note{font-size:4.4vmin} .go-tips li{font-size:4.2vmin}
   .figures{height:58vmin} .garments svg{width:21vmin} .garments.two svg{width:17vmin}
   .bagline{font-size:8vmin} .under{font-size:5vmin} .alt{font-size:4.2vmin} .note{font-size:4.4vmin} .basis{font-size:3.8vmin}
   .today{flex-wrap:wrap} .today .item{flex:1 1 45%; padding:0 0 3vmin; border-left:0 !important}
@@ -707,6 +723,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
       <p id="room" hidden></p>
       <p id="hum" hidden></p>
       <p id="updated" hidden></p>
+      <p id="checkRow" hidden><button class="pill" id="checkBtn" type="button">Check now</button><span class="checkmsg" id="checkMsg" role="status" aria-live="polite"></span></p>
     </div>
   </section>
 
@@ -773,6 +790,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   <button class="btn" data-act="feed" id="feedBtn" hidden>Night feed</button>
   <button class="btn" data-act="light">Night light</button>
   <button class="btn" data-act="sounds">Sounds</button>
+  <button class="btn" data-act="goout">Going out</button>
   <button class="btn" data-act="look" id="lookBtn">Night look</button>
   <button class="btn" data-act="family" id="familyBtn">Family</button>
   <button class="btn" data-act="settings">Settings</button>
@@ -845,6 +863,24 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     <div class="row"><span class="lbl">Volume</span><input type="range" id="vol" min="0" max="100" step="1" aria-label="Volume"></div>
     <div class="row end"><span class="lbl" id="soundStatus"></span><button class="btn primary" id="playBtn">Play</button></div>
     <p class="hint">Keep it quiet and as far from the cot as you can. A timer is gentler than playing all night. If you can&rsquo;t hear it, turn up the Echo&rsquo;s volume.</p>
+  </div>
+</section>
+
+<section class="overlay" id="goOut" aria-label="Going out">
+  <div class="panel">
+    <div class="panel-head"><h2>Going out</h2><button class="btn" data-close>Done</button></div>
+    <div class="go-tabs" id="goTabs">
+      <button class="chip on" data-go="out">Outside</button>
+      <button class="chip" data-go="car">In the car</button>
+    </div>
+    <p class="go-now" id="goNow"></p>
+    <h3>What to wear</h3>
+    <ul class="go-list" id="goWear"></ul>
+    <p class="go-or" id="goOr" hidden></p>
+    <p class="go-note" id="goNote" hidden></p>
+    <h3>Remember</h3>
+    <ul class="go-list go-tips" id="goTips"></ul>
+    <p class="hint" id="goHint"></p>
   </div>
 </section>
 
@@ -1072,7 +1108,9 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     family: $('family'), calList: $('calList'), calLegend: $('calLegend'), calStatus: $('calStatus'), famMsg: $('famMsg'),
     frame: $('frame'), fNote: $('fNote'), familyBtn: $('familyBtn'),
     pager: $('pager'), dots: $('dots'), home: $('home'), hClock: $('hClock'), hDate: $('hDate'), hWx: $('hWx'),
-    hCal: $('hCal'), hPhoto: $('hPhoto'), hEmpty: $('hEmpty'), hPip: $('hPip')
+    hCal: $('hCal'), hPhoto: $('hPhoto'), hEmpty: $('hEmpty'), hPip: $('hPip'),
+    checkRow: $('checkRow'), checkBtn: $('checkBtn'), checkMsg: $('checkMsg'),
+    goOut: $('goOut'), goTabs: $('goTabs'), goNow: $('goNow'), goWear: $('goWear'), goOr: $('goOr'), goNote: $('goNote'), goTips: $('goTips'), goHint: $('goHint')
   };
 
   // ---------- data ----------
@@ -1512,6 +1550,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     renderPill(now);
     renderPip(now);
     homeRender(now);
+    show(el.checkRow, roomOn && !!room);   // the Check now button, once the pod has reported at least once
+    if (openOverlay === el.goOut) goRender();
 
     var r = reading(now);
     if (!r) {
@@ -1590,7 +1630,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (on) controlsTimer = setTimeout(function () { showControls(false); }, 12000);
   }
   el.stage.addEventListener('click', function (e) {
-    if (e.target.closest && e.target.closest('#pill')) return;
+    if (e.target.closest && e.target.closest('#pill, #checkBtn')) return;
     // Tapping the Pip band goes straight to logging (or to Settings when Pip needs fixing).
     if (e.target.closest && e.target.closest('#pip') && pipOn() && logOn()) {
       if (pip.status === 'pass' || pip.status === 'address') openPanel(el.settings); else Log.open('main');
@@ -1607,6 +1647,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     else if (act === 'feed') Feed.open();
     else if (act === 'log') Log.open('main');
     else if (act === 'sounds') openPanel(el.sounds);
+    else if (act === 'goout') openPanel(el.goOut);
     else if (act === 'family') openPanel(el.family);
     else if (act === 'settings') openPanel(el.settings);
     else if (act === 'look') {
@@ -1626,6 +1667,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     node.classList.add('open');
     if (node === el.sounds) syncSounds();
     if (node === el.family) familyOpen();
+    if (node === el.goOut) goRender();
     if (node === el.settings) { pip.dirty = false; sync.dirty = false; syncSettings(); syncSoon(0); phRefresh(); }
   }
   function closePanel() {
@@ -1635,6 +1677,173 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   }
   document.addEventListener('click', function (e) {
     if (e.target.hasAttribute && e.target.hasAttribute('data-close')) closePanel();
+  });
+
+  // ---------- check now ----------
+  // Asks the sensor pod for a reading right now instead of waiting for its next regular one. The button leaves a
+  // request note on the site (POST /api/room { request: true }); the pod looks for it every few seconds and posts a
+  // fresh reading straight away. The page then asks for the latest reading every 1.5 seconds until one newer than
+  // the tap turns up, and gives up after 20 seconds and says so. A pod that has not been taught to look for requests
+  // still answers with its next regular reading if that lands inside the 20 seconds.
+  var Check = { busy: false, tapAt: 0, timer: null, clear: null };
+  var CHECK_WAIT = 20000, CHECK_EVERY = 1500;
+  function roomHeaders(json) {
+    var h = sync.pass ? { 'x-nursery-pass': sync.pass } : {};
+    if (json) h['content-type'] = 'application/json';
+    return h;
+  }
+  function ageWords(ms) {
+    var secs = Math.max(1, Math.round(ms / 1000));
+    if (secs < 90) return secs + (secs === 1 ? ' second' : ' seconds');
+    var mins = Math.round(secs / 60);
+    return mins < 90 ? mins + ' minutes' : Math.round(mins / 60) + ' hours';
+  }
+  function checkDone(msg) {
+    Check.busy = false;
+    el.checkBtn.disabled = false;
+    setText(el.checkBtn, 'Check now');
+    setText(el.checkMsg, msg);
+    clearTimeout(Check.clear);
+    Check.clear = setTimeout(function () { setText(el.checkMsg, ''); }, 10000);
+    render();
+  }
+  function checkPoll() {
+    var waited = Date.now() - Check.tapAt, last = waited >= CHECK_WAIT;
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 6000);
+    fetch('/api/room', { cache: 'no-store', headers: roomHeaders(false), signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { clearTimeout(timer); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        var t = num(d && d.temp), age = num(d && d.age);
+        if (t !== null && age !== null) {
+          room = { temp: t, hum: num(d.hum), at: Date.now() - age };
+          if (age < waited + 500) return checkDone('Updated just now');   // the reading is newer than the tap
+        }
+        if (last) return checkDone(room ? 'No answer yet. Last reading was ' + ageWords(Date.now() - room.at) + ' ago.' : 'No answer from the pod.');
+        Check.timer = setTimeout(checkPoll, CHECK_EVERY);
+      })
+      .catch(function () {
+        clearTimeout(timer);
+        if (last) checkDone('Can’t reach the site.');
+        else Check.timer = setTimeout(checkPoll, CHECK_EVERY);
+      });
+  }
+  function checkNow() {
+    if (Check.busy || !roomOn) return;
+    Check.busy = true;
+    Check.tapAt = Date.now();
+    el.checkBtn.disabled = true;
+    setText(el.checkBtn, 'Checking');
+    setText(el.checkMsg, '');
+    clearTimeout(Check.timer);
+    fetch('/api/room', { method: 'POST', headers: roomHeaders(true), body: JSON.stringify({ request: true }) })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); checkPoll(); })
+      .catch(function () { checkDone('Can’t reach the site.'); });
+  }
+  el.checkBtn.addEventListener('click', checkNow);
+
+  // ---------- going out ----------
+  // What to dress the baby in to go outside or ride in the car, by the outside temperature (the same live figure
+  // as the Outside reading, never the room sensor). These rows are not from the ergoPouch card, which only covers
+  // sleep. They follow the usual Australian advice: dress for the weather with the layers the sleep guide uses,
+  // add a layer rather than a thick one, check bub's tummy, keep under 12 months out of direct sun when the UV is
+  // 3 or more (Cancer Council), no blanket draped over a pram (Red Nose), and in the car nothing bulky under the
+  // harness, with any blanket going over the buckled straps afterwards. Rows run from hottest to coldest; a
+  // temperature uses the first row it reaches. Change the wording here to suit.
+  var OUT_BANDS = [
+    { min: 30, wear: ['A singlet or short-sleeve cotton bodysuit', 'Wide-brim sun hat'], or: [],
+      note: 'Very hot. If you can, wait for a cooler part of the day and stay in the shade.' },
+    { min: 26, wear: ['Short-sleeve cotton bodysuit', 'Wide-brim sun hat'],
+      or: ['A light long-sleeve cotton top over the bodysuit if the UV is up'] },
+    { min: 22, wear: ['Long-sleeve bodysuit or a 0.2 TOG growsuit', 'Sun hat'],
+      or: ['Short-sleeve bodysuit with a light cotton cardigan to put on or take off'] },
+    { min: 18, wear: ['Long-sleeve bodysuit and a 1.0 TOG growsuit', 'Socks', 'Hat'],
+      or: ['0.2 TOG growsuit with a light cardigan', 'A light blanket in the pram to add or take off'] },
+    { min: 14, wear: ['Singlet, long-sleeve bodysuit and a 1.0 TOG growsuit', 'Cardigan or jumper', 'Socks or booties', 'Beanie'],
+      or: ['A light blanket over their legs in the pram, kept below the chin'] },
+    { min: 10, wear: ['Singlet, long-sleeve bodysuit and a 1.0 TOG growsuit', 'Warm jumper or fleece', 'Socks or booties and mittens', 'Beanie'],
+      or: ['A blanket over their legs in the pram, kept below the chin'] },
+    { min: -Infinity, wear: ['Singlet, long-sleeve bodysuit and a 1.0 TOG growsuit', 'Warm jacket or fleece suit', 'Socks or booties and mittens', 'Beanie'],
+      or: ['A blanket over their legs in the pram, kept below the chin'],
+      note: 'Cold. Keep the trip short and pack a spare set of clothes.' }
+  ];
+  var CAR_BANDS = [
+    { min: 28, wear: ['A singlet or short-sleeve cotton bodysuit'], or: [],
+      note: 'Hot. Cool the car before bub gets in and use a shade visor on the side window.' },
+    { min: 22, wear: ['Short-sleeve cotton bodysuit'], or: ['A thin cotton layer on top if the car is cool'] },
+    { min: 16, wear: ['Long-sleeve bodysuit or a 0.2 TOG growsuit', 'Thin socks'], or: [] },
+    { min: 10, wear: ['Singlet and a 1.0 TOG growsuit', 'Socks or booties'],
+      or: ['Long-sleeve bodysuit and a 1.0 TOG growsuit'],
+      note: 'Put a blanket over the buckled harness for warmth.' },
+    { min: -Infinity, wear: ['Singlet, long-sleeve bodysuit and a 1.0 TOG growsuit', 'A thin fleece or cardigan, only if the harness still tightens snugly over it', 'Socks or booties'],
+      or: [],
+      note: 'Put a blanket over the buckled harness for warmth.' }
+  ];
+  var GO_TIPS = {
+    out: ['Check bub’s tummy or the back of the neck, not hands or feet. If it is flushed or sweaty, take a layer off.',
+          'Do not drape a blanket or wrap over the pram, it traps heat. Use a pram shade that lets air through, or an umbrella.'],
+    car: ['Thin, snug layers only. No puffy jackets, snowsuits or thick padding under the harness.',
+          'Buckle bub in first and tighten until you cannot pinch the strap at the shoulder, then put any blanket or jacket over the top. Keep it off the face.',
+          'The car warms up fast. Take the blanket off when it does, and check bub’s tummy or the back of the neck.',
+          'Hats off once buckled in, especially if bub nods off.',
+          'Never leave bub in a parked car, even for a minute.']
+  };
+  var goMode = 'out';
+
+  function goContext(now) {
+    var r = reading(now, true);
+    if (!r) return null;
+    var ms = now.getTime(), soon = between(hours(), ms - 3600000, ms + 3 * 3600000), uv = null, rain = null;
+    soon.forEach(function (x) {
+      if (x.uv !== null && (uv === null || x.uv > uv)) uv = x.uv;
+      if (x.rain !== null && (rain === null || x.rain > rain)) rain = x.rain;
+    });
+    return { temp: r.temp, uv: uv, rain: rain };
+  }
+  function goBand(bands, t) {
+    for (var i = 0; i < bands.length; i++) if (t >= bands[i].min) return bands[i];
+    return bands[bands.length - 1];
+  }
+  function goList(items) { return items.map(function (t) { return '<li>' + t + '</li>'; }).join(''); }
+  function goRender() {
+    var chips = el.goTabs.querySelectorAll('[data-go]');
+    for (var i = 0; i < chips.length; i++) chips[i].classList.toggle('on', chips[i].getAttribute('data-go') === goMode);
+    var c = goContext(new Date());
+    if (!c) {
+      setText(el.goNow, weatherFailed ? 'Can’t get the weather' : 'Getting the weather');
+      el.goWear.innerHTML = ''; el.goTips.innerHTML = '';
+      show(el.goOr, false); show(el.goNote, false);
+      setText(el.goHint, '');
+      return;
+    }
+    var car = goMode === 'car', band = goBand(car ? CAR_BANDS : OUT_BANDS, c.temp);
+    var now = ['Outside ' + deg(c.temp)];
+    if (c.uv !== null) now.push('UV ' + Math.round(c.uv));
+    if (c.rain !== null) now.push('rain ' + Math.round(c.rain) + '%');
+    setText(el.goNow, now.join(', '));
+
+    var tips = GO_TIPS[goMode].slice();
+    if (c.uv !== null && c.uv >= 3) {
+      tips.unshift(car
+        ? 'The UV is ' + Math.round(c.uv) + '. Put a shade visor on the side window so the sun is off bub.'
+        : 'The UV is ' + Math.round(c.uv) + '. Under 12 months should stay out of direct sun, so use dense shade, covering clothes and a wide-brim hat. Under 6 months, skip sunscreen.');
+    }
+    if (!car && c.rain !== null && c.rain >= 40) tips.push('Rain is likely. Pack the pram rain cover and only use it while it is actually raining.');
+
+    el.goWear.innerHTML = goList(band.wear);
+    setText(el.goOr, band.or.map(function (t) { return 'Or ' + t.charAt(0).toLowerCase() + t.slice(1); }).join('\n'));
+    show(el.goOr, band.or.length > 0);
+    setText(el.goNote, band.note || '');
+    show(el.goNote, !!band.note);
+    var html = goList(tips);
+    if (el.goTips.innerHTML !== html) el.goTips.innerHTML = html;
+    setText(el.goHint, car ? 'A guide only, going by the outside temperature. Follow bub’s cues.' : 'A guide only. Follow bub’s cues, and check often when it is warm.');
+  }
+  el.goTabs.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-go]') : null;
+    if (!b) return;
+    goMode = b.getAttribute('data-go') === 'car' ? 'car' : 'out';
+    goRender();
   });
 
   // ---------- night light ----------

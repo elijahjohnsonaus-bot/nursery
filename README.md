@@ -5,6 +5,8 @@ An always-on screen for the nursery, built for an Amazon Echo Show 8 running Lin
 ## What it shows
 
 - The temperature and what the baby should wear: TOG bag and layers, from the live outside temperature (Open-Meteo) plus an optional room adjustment. Later it can use a real room sensor.
+- A **Check now** button under the temperature that asks the sensor pod for a reading straight away (see Sensor pod).
+- **Going out**: what to dress the baby in for a walk or the car (see Going out).
 - Sun, rain, air quality and tonight's temperatures.
 - A night look (dim amber) that switches on and off by itself.
 - Night light and sounds (white, pink and brown noise, shushing, waves, heartbeat) with timers.
@@ -30,6 +32,12 @@ The bag and layers follow the ergoPouch Room Thermometer and What To Wear Guide,
 | 14 and under | 3.5 bag, 1.0 growsuit, singlet | |
 
 Blankets are not on the card. The rule used is that one light cotton or muslin blanket stands in for a 0.2 TOG layer, so a 0.2 TOG growsuit (or a long-sleeve bodysuit) can be a short-sleeve bodysuit plus a light blanket, tucked in firmly. Red Nose says blankets over a sleeping bag are not generally needed and can add to overheating or cover the face, so the bag and layers are the first choice. Only the bags ticked in Settings are used, and the rows and rules are in `STATES` in `index.html`.
+
+## Going out
+
+The controls bar has a **Going out** button. It opens a panel with two tabs, **Outside** (a walk, the pram) and **In the car**, each showing what to dress the baby in, an "Or" option where there is one, and a few reminders. It goes by the live outside temperature (never the room sensor), and adds a UV reminder when the UV in the next few hours is 3 or more and a rain reminder when rain is likely.
+
+These rows are not from the ergoPouch card, which only covers sleep. They use the same layers as the sleep guide and the usual Australian advice: dress for the weather, check bub's tummy or the back of the neck, keep babies under 12 months out of direct sun when the UV is 3 or more (Cancer Council), no blanket draped over a pram (Red Nose), and in the car nothing bulky under the harness, with any blanket going over the buckled straps afterwards. The rows are `OUT_BANDS` and `CAR_BANDS` in `index.html` (hottest first), and the reminders are in `GO_TIPS`. Change the wording there to suit.
 
 ## Pages
 
@@ -222,7 +230,16 @@ Until you switch (above), the screen reads from and logs to the old Pip app exac
 
 ## Sensor pod
 
-Planned: a small sensor board in the room posts the real temperature, and the screen uses it in place of the outside figure. The page can already read `data.json` from a pod at an IP address.
+A small ESP32 with a temperature and humidity sensor posts the real room temperature to `/api/room`, and the screen uses it in place of the outside figure (the page can also read `data.json` straight from a pod at an IP address).
+
+**Check now.** The button under the temperature asks for a reading straight away instead of waiting for the pod's next regular one:
+
+1. The page sends `POST /api/room` with `{ "request": true }`. The site keeps a request note for a minute, or until the pod posts its next reading.
+2. The pod asks `GET /api/room?want=1` every few seconds. The reply is `{ "want": true }` while a request is waiting.
+3. When it sees `want: true`, the pod reads its sensor and posts a reading as normal (`POST /api/room` with `{ "temp": 21.5, "hum": 55 }`).
+4. The page asks for the latest reading every 1.5 seconds until one newer than the tap arrives (it says "Updated just now"), and gives up after 20 seconds with "No answer yet" and how old the last reading is.
+
+A pod that does not ask for requests still works. Check now then shows its next regular reading if that arrives within the 20 seconds. The pod's asking is a tiny request, so every 5 seconds is roughly 17,000 a day, well inside the free plan's 100,000.
 
 ## Files
 
