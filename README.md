@@ -7,6 +7,7 @@ An always-on screen for the nursery, built for an Amazon Echo Show 8 running Lin
 - The temperature and what the baby should wear: TOG bag and layers, from the live outside temperature (Open-Meteo) plus an optional room adjustment. Later it can use a real room sensor.
 - A **Check now** button under the temperature that asks the sensor pod for a reading straight away (see Sensor pod).
 - **Going out**: what to dress the baby in for a walk or the car (see Going out).
+- **Camera**: the Owlet camera's picture on the Echo and on phones on the home Wi-Fi, through the video bridge running on the Echo (see Camera).
 - Sun, rain, air quality and tonight's temperatures.
 - A night look (dim amber) that switches on and off by itself.
 - Night light and sounds (white, pink and brown noise, shushing, waves, heartbeat) with timers.
@@ -38,6 +39,15 @@ Blankets are not on the card. The rule used is that one light cotton or muslin b
 The controls bar has a **Going out** button. It opens a panel with two tabs, **Outside** (a walk, the pram) and **In the car**, each showing what to dress the baby in, an "Or" option where there is one, and a few reminders. It goes by the live outside temperature (never the room sensor), and adds a UV reminder when the UV in the next few hours is 3 or more and a rain reminder when rain is likely.
 
 These rows are not from the ergoPouch card, which only covers sleep. They use the same layers as the sleep guide and the usual Australian advice: dress for the weather, check bub's tummy or the back of the neck, keep babies under 12 months out of direct sun when the UV is 3 or more (Cancer Council), no blanket draped over a pram (Red Nose), and in the car nothing bulky under the harness, with any blanket going over the buckled straps afterwards. The rows are `OUT_BANDS` and `CAR_BANDS` in `index.html` (hottest first), and the reminders are in `GO_TIPS`. Change the wording there to suit.
+
+## Camera
+
+The controls bar has a **Camera** button. It opens a panel that shows the Owlet camera's live picture, using a small video bridge that runs on the Echo itself (in Termux). The bridge talks to the camera and serves a page at `http://127.0.0.1:1984/stream.html?src=NAME` on the Echo, and at the Echo's address on port 1984 for phones on the home Wi-Fi. It asks for a login (user `viewer`) from anything that is not the Echo itself.
+
+- **The address is typed on each screen** (Camera, Camera address) and kept only on that screen. It is never synced and never sits in this file or the repo. The Echo uses `127.0.0.1`; a phone uses the Echo's address.
+- **It only runs when asked.** The camera takes one connection at a time, so the picture starts when you tap **Start camera** and stops on **Stop camera**, **Done**, after 10 minutes, or when the app is left. That leaves the Owlet app free: stop here, wait about 10 seconds, then open the Owlet app. The panel says this too.
+- **Home Wi-Fi only.** Nothing is exposed to the internet. Away from home the panel just shows no picture.
+- **If the picture is blank in the panel**, **Open camera page** opens the same page on its own. Do that once on a phone to log in, then come back. Chrome 142 and later may ask whether this site can reach devices on your network; allow it. The code for this is the `Camera` block in `index.html` (search for `camera`).
 
 ## Pages
 

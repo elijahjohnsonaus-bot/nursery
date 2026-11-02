@@ -680,6 +680,9 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 @media (prefers-reduced-motion: reduce){
   body, .bag-body, .controls, .light-controls{transition:none}
 }
+.cam-box{position:relative; width:100%; max-width:130vmin; padding-top:56.25%; background:#000; border-radius:2vmin; overflow:hidden; margin-bottom:2vmin}
+.cam-box iframe{position:absolute; top:0; left:0; width:100%; height:100%; border:0}
+a.btn{display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:inherit}
 </style>
 </head>
 <body class="zone-none blank">
@@ -791,6 +794,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
   <button class="btn" data-act="light">Night light</button>
   <button class="btn" data-act="sounds">Sounds</button>
   <button class="btn" data-act="goout">Going out</button>
+  <button class="btn" data-act="camera">Camera</button>
   <button class="btn" data-act="look" id="lookBtn">Night look</button>
   <button class="btn" data-act="family" id="familyBtn">Family</button>
   <button class="btn" data-act="settings">Settings</button>
@@ -881,6 +885,28 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     <h3>Remember</h3>
     <ul class="go-list go-tips" id="goTips"></ul>
     <p class="hint" id="goHint"></p>
+  </div>
+</section>
+
+<section class="overlay" id="camera" aria-label="Camera">
+  <div class="panel">
+    <div class="panel-head"><h2>Camera</h2><button class="btn" data-close>Done</button></div>
+    <div class="cam-box" id="camBox" hidden><iframe id="camFrame" title="Camera" allow="local-network-access; local-network; loopback-network; autoplay; fullscreen" referrerpolicy="no-referrer"></iframe></div>
+    <p class="hint" id="camMsg"></p>
+    <div class="row">
+      <button class="btn primary" id="camBtn">Start camera</button>
+      <span style="width:2vmin"></span>
+      <a class="btn" id="camOpen" href="#" target="_blank" rel="noopener" hidden>Open camera page</a>
+    </div>
+    <p class="hint"><strong>Using the Owlet app?</strong> The camera only talks to one thing at a time. Tap <em>Stop camera</em> (or Done), wait about 10 seconds, then open the Owlet app. The picture here also stops by itself after 10 minutes.</p>
+    <div class="set">
+      <h3>Camera address (this screen only)</h3>
+      <p class="hint">The address of the camera page on the Echo, typed once on each screen and kept only on that screen. On the Echo it starts with http://127.0.0.1:1984/stream.html?src= and on a phone on the home Wi-Fi it uses the Echo&rsquo;s address instead of 127.0.0.1. On a phone, tap Open camera page and log in once with the video login before using Start camera.</p>
+      <div class="row">
+        <input type="text" id="camAddr" placeholder="http://127.0.0.1:1984/stream.html?src=NAME" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Camera address">
+        <button class="btn" id="camSave">Save</button>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1005,7 +1031,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 (function () {
   'use strict';
 
-  var VERSION = '28 Oct 2026, v14';
+  var VERSION = '2 Nov 2026, v15';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -1110,7 +1136,8 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     pager: $('pager'), dots: $('dots'), home: $('home'), hClock: $('hClock'), hDate: $('hDate'), hWx: $('hWx'),
     hCal: $('hCal'), hPhoto: $('hPhoto'), hEmpty: $('hEmpty'), hPip: $('hPip'),
     checkRow: $('checkRow'), checkBtn: $('checkBtn'), checkMsg: $('checkMsg'),
-    goOut: $('goOut'), goTabs: $('goTabs'), goNow: $('goNow'), goWear: $('goWear'), goOr: $('goOr'), goNote: $('goNote'), goTips: $('goTips'), goHint: $('goHint')
+    goOut: $('goOut'), goTabs: $('goTabs'), goNow: $('goNow'), goWear: $('goWear'), goOr: $('goOr'), goNote: $('goNote'), goTips: $('goTips'), goHint: $('goHint'),
+    camera: $('camera'), camBox: $('camBox'), camFrame: $('camFrame'), camMsg: $('camMsg'), camBtn: $('camBtn'), camOpen: $('camOpen'), camAddr: $('camAddr'), camSave: $('camSave')
   };
 
   // ---------- data ----------
@@ -1648,6 +1675,7 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     else if (act === 'log') Log.open('main');
     else if (act === 'sounds') openPanel(el.sounds);
     else if (act === 'goout') openPanel(el.goOut);
+    else if (act === 'camera') openPanel(el.camera);
     else if (act === 'family') openPanel(el.family);
     else if (act === 'settings') openPanel(el.settings);
     else if (act === 'look') {
@@ -1668,15 +1696,89 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
     if (node === el.sounds) syncSounds();
     if (node === el.family) familyOpen();
     if (node === el.goOut) goRender();
+    if (node === el.camera) camRender();
     if (node === el.settings) { pip.dirty = false; sync.dirty = false; syncSettings(); syncSoon(0); phRefresh(); }
   }
   function closePanel() {
+    if (openOverlay === el.camera) camStop();
     if (openOverlay) openOverlay.classList.remove('open');
     openOverlay = null;
     render();
   }
   document.addEventListener('click', function (e) {
     if (e.target.hasAttribute && e.target.hasAttribute('data-close')) closePanel();
+  });
+
+  // ---------- camera ----------
+  // Shows the Owlet camera through the video bridge running on the Echo (a small program in Termux). The address of
+  // the bridge's camera page is typed on each screen and kept only on that screen: it is never synced and never sits in
+  // this file. The Echo uses http://127.0.0.1:1984/stream.html?src=NAME and a phone on the home Wi-Fi uses the Echo's
+  // address in place of 127.0.0.1.
+  // The camera only takes one connection at a time, so the picture only runs while this panel is open and Start has
+  // been tapped. It stops on Done, after 10 minutes, and when the page is hidden, which leaves the Owlet app free.
+  var CAM_KEY = 'nursery.camera.addr', CAM_MINUTES = 10, CAM_TICK = 15000;
+  var Camera = { on: false, until: 0, stopAt: null, tick: null, slow: null, msg: '' };
+  function camAddr() { var v = load(CAM_KEY); return typeof v === 'string' ? v : ''; }
+  function camOk(a) { return /^https?:\/\/\S+$/i.test(a); }
+  function camRender() {
+    var a = camAddr(), ok = camOk(a), msg = Camera.msg;
+    if (document.activeElement !== el.camAddr) el.camAddr.value = a;
+    el.camBtn.textContent = Camera.on ? 'Stop camera' : 'Start camera';
+    el.camBtn.disabled = !Camera.on && !ok;
+    show(el.camBox, Camera.on);
+    show(el.camOpen, ok);
+    if (ok) el.camOpen.href = a;
+    if (Camera.on) {
+      var mins = Math.max(1, Math.ceil((Camera.until - Date.now()) / 60000));
+      msg = (msg ? msg + ' ' : '') + 'Stops by itself in ' + mins + (mins === 1 ? ' minute.' : ' minutes.');
+    } else if (!ok && !msg) {
+      msg = 'Add the camera address for this screen below, then tap Start camera.';
+    }
+    setText(el.camMsg, msg);
+  }
+  function camStart() {
+    var a = camAddr();
+    if (Camera.on || !camOk(a)) return;
+    Camera.on = true;
+    Camera.until = Date.now() + CAM_MINUTES * 60000;
+    Camera.msg = 'Connecting. The picture can take up to 20 seconds.';
+    el.camFrame.src = a;
+    Camera.stopAt = setTimeout(function () {
+      camStop('Stopped after ' + CAM_MINUTES + ' minutes so the Owlet app can use the camera. Tap Start camera to watch again.');
+    }, CAM_MINUTES * 60000);
+    Camera.tick = setInterval(camRender, CAM_TICK);
+    Camera.slow = setTimeout(function () {
+      if (Camera.on) {
+        Camera.msg = 'If there is no picture yet, check this screen is on the home Wi-Fi and the Echo is on. On a phone, tap Open camera page and log in once.';
+        camRender();
+      }
+    }, 25000);
+    camRender();
+  }
+  function camStop(msg) {
+    var was = Camera.on;
+    if (Camera.stopAt) clearTimeout(Camera.stopAt);
+    if (Camera.slow) clearTimeout(Camera.slow);
+    if (Camera.tick) clearInterval(Camera.tick);
+    Camera.stopAt = Camera.slow = Camera.tick = null;
+    Camera.on = false;
+    try { el.camFrame.src = 'about:blank'; } catch (e) { /* nothing to stop */ }
+    Camera.msg = was ? (msg || 'Camera off. Give it about 10 seconds, then the Owlet app can use the camera.') : '';
+    camRender();
+  }
+  function camSave() {
+    var a = el.camAddr.value.replace(/^\s+|\s+$/g, '');
+    if (a && !camOk(a)) { Camera.msg = 'That does not look like an address. It should start with http:// or https://'; camRender(); return; }
+    if (Camera.on) camStop();
+    save(CAM_KEY, a);
+    Camera.msg = a ? 'Saved on this screen only.' : 'Address removed from this screen.';
+    camRender();
+  }
+  el.camBtn.addEventListener('click', function () { if (Camera.on) camStop(); else camStart(); });
+  el.camSave.addEventListener('click', camSave);
+  el.camAddr.addEventListener('keydown', function (e) { if (e.key === 'Enter') camSave(); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && Camera.on) camStop('The camera stopped when the app was left, so the Owlet app can use it.');
   });
 
   // ---------- check now ----------
