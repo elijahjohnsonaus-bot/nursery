@@ -898,7 +898,18 @@ a.btn{display:inline-flex; align-items:center; justify-content:center; text-deco
       <span style="width:2vmin"></span>
       <a class="btn" id="camOpen" href="#" target="_blank" rel="noopener" hidden>Open camera page</a>
     </div>
-    <p class="hint"><strong>Using the Owlet app?</strong> The camera only talks to one thing at a time. Tap <em>Stop camera</em> (or Done), wait about 10 seconds, then open the Owlet app. The picture here also stops by itself after 10 minutes.</p>
+    <p class="hint"><strong>Using the Owlet app?</strong> The camera only talks to one thing at a time. Tap <em>Stop camera</em> (or Done), wait about 10 seconds, then open the Owlet app. The picture here also stops by itself after the time chosen below.</p>
+    <div class="set">
+      <h3>Keep watching (this screen only)</h3>
+      <p class="hint">How long the picture runs before it stops by itself. While it runs, the Owlet app can&rsquo;t use the camera, so <em>Until I stop it</em> suits the Echo and a shorter time suits a phone.</p>
+      <div class="row">
+        <select id="camFor" aria-label="Stop the camera after">
+          <option value="10">10 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="0">Until I stop it</option>
+        </select>
+      </div>
+    </div>
     <div class="set">
       <h3>Camera address (this screen only)</h3>
       <p class="hint">The address of the camera page on the Echo, typed once on each screen and kept only on that screen. On the Echo it starts with http://127.0.0.1:1984/stream.html?src= and on a phone on the home Wi-Fi it uses the Echo&rsquo;s address instead of 127.0.0.1. On a phone, tap Open camera page and log in once with the video login before using Start camera.</p>
@@ -1031,7 +1042,7 @@ a.btn{display:inline-flex; align-items:center; justify-content:center; text-deco
 (function () {
   'use strict';
 
-  var VERSION = '2 Nov 2026, v15';
+  var VERSION = '3 Nov 2026, v16';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -1137,7 +1148,7 @@ a.btn{display:inline-flex; align-items:center; justify-content:center; text-deco
     hCal: $('hCal'), hPhoto: $('hPhoto'), hEmpty: $('hEmpty'), hPip: $('hPip'),
     checkRow: $('checkRow'), checkBtn: $('checkBtn'), checkMsg: $('checkMsg'),
     goOut: $('goOut'), goTabs: $('goTabs'), goNow: $('goNow'), goWear: $('goWear'), goOr: $('goOr'), goNote: $('goNote'), goTips: $('goTips'), goHint: $('goHint'),
-    camera: $('camera'), camBox: $('camBox'), camFrame: $('camFrame'), camMsg: $('camMsg'), camBtn: $('camBtn'), camOpen: $('camOpen'), camAddr: $('camAddr'), camSave: $('camSave')
+    camera: $('camera'), camBox: $('camBox'), camFrame: $('camFrame'), camMsg: $('camMsg'), camBtn: $('camBtn'), camOpen: $('camOpen'), camAddr: $('camAddr'), camSave: $('camSave'), camFor: $('camFor')
   };
 
   // ---------- data ----------
@@ -1716,21 +1727,29 @@ a.btn{display:inline-flex; align-items:center; justify-content:center; text-deco
   // address in place of 127.0.0.1.
   // The camera only takes one connection at a time, so the picture only runs while this panel is open and Start has
   // been tapped. It stops on Done, after 10 minutes, and when the page is hidden, which leaves the Owlet app free.
-  var CAM_KEY = 'nursery.camera.addr', CAM_MINUTES = 10, CAM_TICK = 15000;
+  var CAM_KEY = 'nursery.camera.addr', CAM_FOR_KEY = 'nursery.camera.minutes', CAM_DEFAULT_MIN = 10, CAM_TICK = 15000;
   var Camera = { on: false, until: 0, stopAt: null, tick: null, slow: null, msg: '' };
   function camAddr() { var v = load(CAM_KEY); return typeof v === 'string' ? v : ''; }
+  // How long the picture runs: 10 minutes, 1 hour, or 0 for until it is stopped. Chosen per screen.
+  function camMinutes() { var v = load(CAM_FOR_KEY); return (v === 0 || v === 10 || v === 60) ? v : CAM_DEFAULT_MIN; }
+  function camLabel(m) { return m === 60 ? '1 hour' : m + ' minutes'; }
   function camOk(a) { return /^https?:\/\/\S+$/i.test(a); }
   function camRender() {
     var a = camAddr(), ok = camOk(a), msg = Camera.msg;
     if (document.activeElement !== el.camAddr) el.camAddr.value = a;
+    if (document.activeElement !== el.camFor) el.camFor.value = String(camMinutes());
     el.camBtn.textContent = Camera.on ? 'Stop camera' : 'Start camera';
     el.camBtn.disabled = !Camera.on && !ok;
     show(el.camBox, Camera.on);
     show(el.camOpen, ok);
     if (ok) el.camOpen.href = a;
     if (Camera.on) {
-      var mins = Math.max(1, Math.ceil((Camera.until - Date.now()) / 60000));
-      msg = (msg ? msg + ' ' : '') + 'Stops by itself in ' + mins + (mins === 1 ? ' minute.' : ' minutes.');
+      if (Camera.until) {
+        var mins = Math.max(1, Math.ceil((Camera.until - Date.now()) / 60000));
+        msg = (msg ? msg + ' ' : '') + 'Stops by itself in ' + mins + (mins === 1 ? ' minute.' : ' minutes.');
+      } else {
+        msg = (msg ? msg + ' ' : '') + 'Stays on until you tap Stop camera. The Owlet app can\u2019t use the camera meanwhile.';
+      }
     } else if (!ok && !msg) {
       msg = 'Add the camera address for this screen below, then tap Start camera.';
     }
@@ -1739,13 +1758,16 @@ a.btn{display:inline-flex; align-items:center; justify-content:center; text-deco
   function camStart() {
     var a = camAddr();
     if (Camera.on || !camOk(a)) return;
+    var mins = camMinutes();
     Camera.on = true;
-    Camera.until = Date.now() + CAM_MINUTES * 60000;
+    Camera.until = mins ? Date.now() + mins * 60000 : 0;
     Camera.msg = 'Connecting. The picture can take up to 20 seconds.';
     el.camFrame.src = a;
-    Camera.stopAt = setTimeout(function () {
-      camStop('Stopped after ' + CAM_MINUTES + ' minutes so the Owlet app can use the camera. Tap Start camera to watch again.');
-    }, CAM_MINUTES * 60000);
+    if (mins) {
+      Camera.stopAt = setTimeout(function () {
+        camStop('Stopped after ' + camLabel(mins) + ' so the Owlet app can use the camera. Tap Start camera to watch again.');
+      }, mins * 60000);
+    }
     Camera.tick = setInterval(camRender, CAM_TICK);
     Camera.slow = setTimeout(function () {
       if (Camera.on) {
@@ -1776,6 +1798,11 @@ a.btn{display:inline-flex; align-items:center; justify-content:center; text-deco
   }
   el.camBtn.addEventListener('click', function () { if (Camera.on) camStop(); else camStart(); });
   el.camSave.addEventListener('click', camSave);
+  el.camFor.addEventListener('change', function () {
+    save(CAM_FOR_KEY, parseInt(el.camFor.value, 10));
+    Camera.msg = Camera.on ? 'Saved. It applies the next time you tap Start camera.' : 'Saved on this screen only.';
+    camRender();
+  });
   el.camAddr.addEventListener('keydown', function (e) { if (e.key === 'Enter') camSave(); });
   document.addEventListener('visibilitychange', function () {
     if (document.hidden && Camera.on) camStop('The camera stopped when the app was left, so the Owlet app can use it.');
