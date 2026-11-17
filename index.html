@@ -683,6 +683,9 @@ body.night .b-sheet{background:#000; color:var(--amber); border:.12em solid var(
 .cam-box{position:relative; width:100%; max-width:130vmin; padding-top:56.25%; background:#000; border-radius:2vmin; overflow:hidden; margin-bottom:2vmin}
 .cam-box iframe{position:absolute; top:0; left:0; width:100%; height:100%; border:0}
 a.btn{display:inline-flex; align-items:center; justify-content:center; text-decoration:none; color:inherit}
+
+/* touch-up: fast taps on any button never zoom the page */
+button,[role=button],a,label{touch-action:manipulation}
 </style>
 </head>
 <body class="zone-none blank">
