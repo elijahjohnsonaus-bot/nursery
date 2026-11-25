@@ -1009,7 +1009,7 @@ button,[role=button],a,label{touch-action:manipulation}
 
     <div class="set" id="feedSet">
       <h3>Next feed</h3>
-      <p class="hint">Breast feeds are timed from when they start (bottles don&rsquo;t count), so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. A breast feed that starts within an hour of the one before it counts as part of it. The last feed before the time below is followed by the night gap instead, and feeds after that go back to the day gap. Shown on the nursery and Home screens, the night feed screen and the Baby page.</p>
+      <p class="hint">Feeds, breast or bottle, are timed from when they start, so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. A feed that starts within an hour of the one before it counts as part of it. The last feed before the time below is followed by the night gap instead, and feeds after that go back to the day gap. Shown on the nursery and Home screens, the night feed screen and the Baby page.</p>
       <div class="row"><span class="lbl">Day gap</span><button class="btn" data-gap="gapDay" data-d="-15" aria-label="Shorter">&minus;</button><span class="gapval" id="gapDayV"></span><button class="btn" data-gap="gapDay" data-d="15" aria-label="Longer">+</button></div>
       <div class="row"><span class="lbl">Night gap</span><button class="btn" data-gap="gapNight" data-d="-15" aria-label="Shorter">&minus;</button><span class="gapval" id="gapNightV"></span><button class="btn" data-gap="gapNight" data-d="15" aria-label="Longer">+</button></div>
       <div class="row"><span class="lbl">Last feed before</span><input type="time" id="nightAt" aria-label="The night gap follows the last feed before this time"><span class="muted">is followed by the night gap</span></div>
@@ -1045,7 +1045,7 @@ button,[role=button],a,label{touch-action:manipulation}
 (function () {
   'use strict';
 
-  var VERSION = '3 Nov 2026, v16';
+  var VERSION = '25 Nov 2026, v17';
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -2409,7 +2409,7 @@ button,[role=button],a,label{touch-action:manipulation}
     return out;
   }
 
-  var ANCHOR_WINDOW = 60 * 60000;   // a breast feed within this long of the previous one's start belongs to it
+  var ANCHOR_WINDOW = 60 * 60000;   // a feed (breast or bottle) within this long of the previous one's start belongs to it
   // The same rules Pip uses on its own home screen.
   function pipStats(ms) {
     var list = pipList();
@@ -2418,9 +2418,9 @@ button,[role=button],a,label{touch-action:manipulation}
     list.forEach(function (e) {
       var isFeed = e.type === 'breast' || e.type === 'bottle';
       if (isFeed && !s.feed) s.feed = e;
-      // The next feed is counted from a breast feed only (never a bottle). A breast feed that starts within an hour of
+      // The next feed is counted from the last feed, breast or bottle. A feed that starts within an hour of
       // the one before it is the baby coming back for more, so the schedule stays with the first.
-      if (e.type === 'breast' && !s.anchorDone) {
+      if (isFeed && !s.anchorDone) {
         if (!s.anchor || s.anchor.start - e.start < ANCHOR_WINDOW) s.anchor = e; else s.anchorDone = true;
       }
       if (isFeed && e.running && !s.runFeed) s.runFeed = e;
@@ -2493,7 +2493,7 @@ button,[role=button],a,label{touch-action:manipulation}
   }
 
   // ---- when the next feed is due
-  // Breast feeds are timed from the START of the last one (bottles don't count): a feed that starts at 3:00 pm is followed
+  // Feeds (breast or bottle) are timed from the START of the last one: a feed that starts at 3:00 pm is followed
   // by one at 6:00 pm (a 3 hour gap) even if it runs until 3:30 pm. The last feed before the night time (12:00 am to begin with) gets the longer night
   // gap instead, so the first stretch of the night can be longer. Feeds after that go back to the day gap.
   function timeOk(v) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(v); }
@@ -4273,7 +4273,7 @@ button,[role=button],a,label{touch-action:manipulation}
       '<p class="b-hint">The same on every screen and phone.</p>' +
       '<h2>Next feed</h2>' + bGapField('gapDay', 'Day gap') + bGapField('gapNight', 'Night gap') +
       '<div class="b-field"><label for="bNightAt">The night gap follows the last feed before</label><input class="b-in" id="bNightAt" type="time" value="' + bEsc(nightAtText()) + '"></div>' +
-      '<p class="b-hint">Breast feeds are timed from when they start (bottles don’t count), so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. A breast feed that starts within an hour of the one before it counts as part of it. The last feed before the time above is followed by the night gap instead, and feeds after that go back to the day gap. The same on every screen and phone.</p>' +
+      '<p class="b-hint">Feeds, breast or bottle, are timed from when they start, so a feed that starts at 3:00 pm and runs until 3:30 pm still means the next one at 6:00 pm with a 3 hour gap. A feed that starts within an hour of the one before it counts as part of it. The last feed before the time above is followed by the night gap instead, and feeds after that go back to the day gap. The same on every screen and phone.</p>' +
       '<h2>Nappy guide</h2><div class="b-chips"><button class="b-chip" data-b="guide" aria-pressed="' + guide + '">Show the 24 hour guide</button></div>' +
       '<div class="b-r2"><div class="b-field"><label for="bWet">Wet nappies a day</label><input class="b-in" id="bWet" type="number" min="0" max="20" inputmode="numeric" value="' + settings.pip.wet + '"></div>' +
       '<div class="b-field"><label for="bDirty">Dirty nappies a day</label><input class="b-in" id="bDirty" type="number" min="0" max="20" inputmode="numeric" value="' + settings.pip.dirty + '"></div></div>' +
