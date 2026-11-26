@@ -209,7 +209,7 @@ Tap the baby strip on Home or the nursery screen, or the Log button, to open the
 
 - **Left / Right**: start a feed (the suggested side is marked Next). While a feed runs, the other side switches, and Stop feed saves it.
 - **Pause**: stops the timers while the baby comes off (a burp, a nappy change) and **Resume** carries on. Tapping a side while paused resumes on that side. Stopping a paused feed ends it at the moment you paused, so "since last feed" is right even if Stop is tapped later. Pause is on the Log screen, the night feed screen and the Baby page.
-- **Bottle**: amount, expressed or formula, and when (now or up to an hour ago).
+- **Bottle**: starts a timer just like a breast feed. Tap **End bottle** (or **Finish** on the Baby page) when they are done and it asks how many mL, expressed or formula. To add a bottle that already happened, use **Add an entry for this day** on the Baby page (Days).
 - **Nappy**: wet, dirty or both, and when.
 - **Sleep** and **Pump**: start and stop. Stopping a pump asks for the amounts.
 - **Recent**: the last few entries, with delete (tap twice).

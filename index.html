@@ -2641,6 +2641,16 @@ button,[role=button],a,label{touch-action:manipulation}
     for (i = 0; i < l.length; i++) if (l[i].type === type) return l[i];
     return null;
   }
+  // The last bottle that was finished with an amount, so the ml question starts from what was given last time.
+  function pipLastBottle() {
+    var l = pipList(), i;
+    for (i = 0; i < l.length; i++) if (l[i].type === 'bottle' && !l[i].running && l[i].ml > 0) return l[i];
+    return null;
+  }
+  function bottleDefaults() {
+    var last = pipLastBottle();
+    return { ml: last ? Math.min(400, last.ml) : 60, kind: last && last.kind === 'formula' ? 'formula' : 'expressed' };
+  }
   function refresh() { render(); if (Feed.on) Feed.paint(); if (Log.on) Log.paint(); Baby.paint(); }
   function pipSoon() { clearTimeout(pip.soon); pip.soon = setTimeout(pipLoad, 400); }
 
@@ -2712,10 +2722,42 @@ button,[role=button],a,label{touch-action:manipulation}
   }
 
   function nextSideNow() { return pipStats(Date.now()).next || 'left'; }
+  // A bottle starts the same way a breast feed does: one tap starts the timer, and Finish asks how many mL.
+  function startBottle(quiet) {
+    if (!logReady()) return;
+    fresh(function () {
+      if (pipLive('breast') || pipLive('bottle')) { toast('A feed is already running', false); refresh(); return; }
+      var now = Date.now(), made;
+      doLog(function (a) {
+        made = a.add('bottle', { start: now, running: true, end: null, ml: 0, kind: bottleDefaults().kind });
+        return 'Bottle started';
+      });
+      pip.seenRun = made.id;
+      if (quiet) return;
+      if (!Feed.on && modeNow(new Date()) === 'night') { Log.close(); Feed.open(); }
+      else if (Feed.on) Log.close();
+    });
+  }
+  // Finish a running bottle with the amount that was given.
+  function finishBottle(id, ml, kind) {
+    var e = pip.entries[id];
+    if (!e || e.deleted || !e.running) return;
+    var now = Date.now();
+    doLog(function (a) {
+      a.edit(e, function (x) { x.end = now; x.running = false; x.ml = ml; x.kind = kind; });
+      return 'Bottle saved, ' + ml + ' mL';
+    });
+  }
+  // The Bottle button on every screen: start one, or finish the one that is running.
+  function bottleTap(quiet) {
+    var b = pipLive('bottle');
+    if (b) { Log.open('bottle'); return; }
+    startBottle(quiet);
+  }
   function startBreast(side, quiet) {
     if (!logReady()) return;
     fresh(function () {
-      if (pipLive('breast')) { toast('A feed is already running', false); refresh(); return; }
+      if (pipLive('breast') || pipLive('bottle')) { toast('A feed is already running', false); refresh(); return; }
       var now = Date.now(), made;
       doLog(function (a) {
         made = a.add('breast', { start: now, side: side, lastSide: side, sideStart: now, leftMs: 0, rightMs: 0, pauseMs: 0, running: true, end: null });
@@ -2798,8 +2840,8 @@ button,[role=button],a,label{touch-action:manipulation}
     Log.view = 'main'; Log.paint();
   }
   function saveBottle() {
-    var ago = Log.off * MIN, ml = Log.ml, kind = Log.kind;
-    doLog(function (a) { a.add('bottle', { start: Date.now() - ago, ml: ml, kind: kind }); return 'Bottle, ' + ml + ' mL'; });
+    var e = pipLive('bottle');
+    if (e) finishBottle(e.id, Log.ml, Log.kind);
     Log.view = 'main'; Log.paint();
   }
   function saveNappy(kind) {
@@ -2824,6 +2866,7 @@ button,[role=button],a,label{touch-action:manipulation}
           (e.leftMs ? ' · L ' + pdur(e.leftMs) : '') + (e.rightMs ? ' · R ' + pdur(e.rightMs) : '');
         return { t: 'Breast feed', d: d };
       case 'bottle':
+        if (e.running) return { t: 'Bottle', d: 'feeding now' };
         return { t: 'Bottle', d: (e.ml || 0) + ' mL' + (e.kind ? ' · ' + e.kind : '') };
       case 'nappy':
         return { t: 'Nappy', d: e.wet && e.dirty ? 'wet and dirty' : (e.dirty ? 'dirty' : 'wet') };
@@ -2866,9 +2909,8 @@ button,[role=button],a,label{touch-action:manipulation}
     open: function (view) {
       this.view = view || 'main'; this.on = true; this.confirm = null; this.html = ''; this.off = 0;
       if (this.view === 'bottle') {
-        var last = pipLast('bottle');
-        this.ml = last && last.ml > 0 ? Math.min(400, last.ml) : 60;
-        this.kind = last && last.kind === 'formula' ? 'formula' : 'expressed';
+        var bd = bottleDefaults();
+        this.ml = bd.ml; this.kind = bd.kind;
       }
       if (this.view === 'pump') {
         var p = pipLive('pump');
@@ -2885,7 +2927,7 @@ button,[role=button],a,label{touch-action:manipulation}
     poke: function () { clearTimeout(this.idle); this.idle = setTimeout(function () { Log.close(); }, 3 * MIN); },
     main: function () {
       var ready = logReady(), now = Date.now(), run = ready ? pipLive('breast') : null, s = pipStats(now);
-      var next = s.next || 'left', sleep = pipLive('sleep'), pump = pipLive('pump'), dis = ready ? '' : ' disabled', h = '';
+      var next = s.next || 'left', sleep = pipLive('sleep'), pump = pipLive('pump'), bot = ready ? pipLive('bottle') : null, dis = ready ? '' : ' disabled', h = '';
       h += '<div class="logp-cols"><div>';
       if (!ready) {
         h += '<p class="hint">' + (pip.status === 'pass' ? 'The passcode doesn’t match the one in Pip. Check it in Settings.'
@@ -2904,7 +2946,7 @@ button,[role=button],a,label{touch-action:manipulation}
       if (run) h += '<div class="lg-row"><button class="lg-tile' + (run.paused ? ' on' : '') + '" data-lg="pause"' + dis + '>' + (run.paused ? 'Resume' : 'Pause') + '</button>' +
         '<button class="lg-tile solid" data-lg="stop"' + dis + '>Stop feed</button></div>';
       h += '<div class="lg-row four">' +
-        '<button class="lg-tile" data-lg="view" data-v="bottle"' + dis + '>Bottle<small>Log one</small></button>' +
+        '<button class="lg-tile' + (bot ? ' on' : '') + '" data-lg="bottle"' + dis + '>' + (bot ? 'End bottle' : 'Bottle') + '<small>' + (bot ? '<span id="lg-bt"></span>' : 'Start') + '</small></button>' +
         '<button class="lg-tile" data-lg="view" data-v="nappy"' + dis + '>Nappy<small>Log one</small></button>' +
         '<button class="lg-tile' + (sleep ? ' on' : '') + '" data-lg="sleep"' + dis + '>' + (sleep ? 'End sleep' : 'Sleep') + '<small>' + (sleep ? '<span id="lg-sl"></span>' : 'Start') + '</small></button>' +
         '<button class="lg-tile' + (pump ? ' on' : '') + '" data-lg="pump"' + dis + '>' + (pump ? 'Stop pump' : 'Pump') + '<small>' + (pump ? '<span id="lg-pm"></span>' : 'Start') + '</small></button>' +
@@ -2921,12 +2963,13 @@ button,[role=button],a,label{touch-action:manipulation}
     sub: function () {
       var v = this.view, h = '<div class="lg-sub">';
       if (v === 'bottle') {
-        h += '<h3>Bottle</h3><div class="lg-step"><button class="lg-sq" data-lg="step" data-k="ml" data-v="-10" aria-label="Less">−</button>' +
+        var bq = pipLive('bottle');
+        h += '<h3>Bottle finished</h3><p class="hint">' + (bq ? pdur(Date.now() - bq.start) + ' from ' + clockText(new Date(bq.start)) + '. ' : '') + 'How many mL did they have?</p>' +
+          '<div class="lg-step"><button class="lg-sq" data-lg="step" data-k="ml" data-v="-10" aria-label="Less">−</button>' +
           '<span class="lg-val">' + this.ml + '<em>mL</em></span><button class="lg-sq" data-lg="step" data-k="ml" data-v="10" aria-label="More">+</button></div>' +
           '<div class="row">' + chipRow('mlset', [[30, '30'], [60, '60'], [90, '90'], [120, '120'], [150, '150']], this.ml) + '</div>' +
           '<div class="row">' + chipRow('kind', [['expressed', 'Expressed'], ['formula', 'Formula']], this.kind) + '</div>' +
-          '<div class="row"><span class="lbl">When</span>' + chipRow('off', OFFS, this.off) + '</div>' +
-          '<div class="lg-row"><button class="lg-tile" data-lg="back">Cancel</button><button class="lg-tile solid" data-lg="savebottle">Save bottle</button></div>';
+          '<div class="lg-row"><button class="lg-tile" data-lg="back">Back</button><button class="lg-tile solid" data-lg="savebottle">Save bottle</button></div>';
       } else if (v === 'nappy') {
         h += '<h3>Nappy</h3><div class="row"><span class="lbl">When</span>' + chipRow('off', OFFS, this.off) + '</div>' +
           '<p class="hint">Tap one to log it straight away.</p>' +
@@ -2952,8 +2995,9 @@ button,[role=button],a,label{touch-action:manipulation}
     // (replacing the buttons mid-tap would swallow the tap).
     tick: function () {
       if (!this.on || this.view !== 'main') return;
-      var now = Date.now(), run = pipLive('breast'), sleep = pipLive('sleep'), pump = pipLive('pump');
+      var now = Date.now(), run = pipLive('breast'), sleep = pipLive('sleep'), pump = pipLive('pump'), bot = pipLive('bottle');
       function put(id, t) { var n = $(id); if (n) setText(n, t); }
+      if (bot) put('lg-bt', pclock(now - bot.start));
       if (run) {
         put('lg-run', pclock(feedActive(run, now)));
         put('lg-tl', pclock((run.leftMs || 0) + (run.side === 'left' && run.sideStart ? now - run.sideStart : 0)));
@@ -2976,6 +3020,7 @@ button,[role=button],a,label{touch-action:manipulation}
     if (a === 'sleep') { toggleSleep(); return; }
     if (a === 'pump') { startPump(); return; }
     if (a === 'view') { Log.open(v); return; }
+    if (a === 'bottle') { bottleTap(); return; }
     if (a === 'back') { Log.view = 'main'; Log.paint(); return; }
     if (a === 'step') {
       var cap = k === 'ml' ? 400 : 500;
@@ -3028,11 +3073,14 @@ button,[role=button],a,label{touch-action:manipulation}
     // Big buttons under the timer: start or switch a side, stop, or log a nappy, bottle or sleep.
     paintAct: function (v, ready) {
       var box = $('f-act'), run = ready && !v.msg ? pipLive('breast') : null, sleep = ready ? pipLive('sleep') : null;
-      var key = !ready || v.msg ? 'off' : run ? 'run|' + run.id + '|' + run.side + '|' + (run.paused ? 1 : 0) : 'idle|' + nextSideNow() + '|' + (sleep ? 1 : 0);
+      var bot = ready && !v.msg && !run ? pipLive('bottle') : null;
+      var key = !ready || v.msg ? 'off' : run ? 'run|' + run.id + '|' + run.side + '|' + (run.paused ? 1 : 0) : bot ? 'bottle|' + bot.id : 'idle|' + nextSideNow() + '|' + (sleep ? 1 : 0);
       if (key !== this.actKey) {
         this.actKey = key;
         var h = '';
-        if (key !== 'off') {
+        if (bot) {
+          h += '<button class="fa stop" data-fa="bottle">End bottle<small><span id="fa-bt"></span></small></button>';
+        } else if (key !== 'off') {
           var next = nextSideNow();
           ['left', 'right'].forEach(function (side) {
             var w = side === 'left' ? 'Left' : 'Right';
@@ -3054,6 +3102,7 @@ button,[role=button],a,label{touch-action:manipulation}
         if ((n = $('fa-tr'))) setText(n, pclock((run.rightMs || 0) + (run.side === 'right' && run.sideStart ? ms - run.sideStart : 0)));
       }
       if (sleep && (n = $('fa-sl'))) setText(n, pdur(Date.now() - sleep.start));
+      if (bot && (n = $('fa-bt'))) setText(n, pclock(Date.now() - bot.start));
     }
   };
   el.feed.addEventListener('click', function (e) {
@@ -3065,7 +3114,7 @@ button,[role=button],a,label{touch-action:manipulation}
     else if (a === 'pause') pauseFeed();
     else if (a === 'stop') stopFeed();
     else if (a === 'nappy') Log.open('nappy');
-    else if (a === 'bottle') Log.open('bottle');
+    else if (a === 'bottle') bottleTap();
     else if (a === 'sleep') toggleSleep();
   });
 
@@ -4071,7 +4120,9 @@ button,[role=button],a,label{touch-action:manipulation}
         if (e.leftMs) bits.push('L ' + pdur(e.leftMs));
         if (e.rightMs) bits.push('R ' + pdur(e.rightMs));
         return { t: 'Breast feed', d: bits.join(' · ') };
-      case 'bottle': return { t: 'Bottle', d: (e.ml || 0) + ' mL · ' + (e.kind === 'formula' ? 'formula' : 'expressed') };
+      case 'bottle':
+        if (e.running) return { t: 'Bottle', d: 'feeding now' };
+        return { t: 'Bottle', d: (e.ml || 0) + ' mL · ' + (e.kind === 'formula' ? 'formula' : 'expressed') };
       case 'pump':
         if (e.running) return { t: 'Pump', d: 'pumping now' };
         tot = (e.leftMl || 0) + (e.rightMl || 0);
@@ -4183,8 +4234,8 @@ button,[role=button],a,label{touch-action:manipulation}
       '<button class="b-btn g" data-b="whoecho">This is the nursery screen</button></div>';
   }
   function bActsHtml() {
-    var live = { breast: pipLive('breast'), pump: pipLive('pump'), sleep: pipLive('sleep') };
-    var A = [['breast', 'Breast'], ['bottle', 'Bottle'], ['pump', live.pump ? 'Stop pump' : 'Pump'], ['nappy', 'Nappy'], ['sleep', live.sleep ? 'End sleep' : 'Sleep'], ['more', 'More']];
+    var live = { breast: pipLive('breast'), bottle: pipLive('bottle'), pump: pipLive('pump'), sleep: pipLive('sleep') };
+    var A = [['breast', 'Breast'], ['bottle', live.bottle ? 'End bottle' : 'Bottle'], ['pump', live.pump ? 'Stop pump' : 'Pump'], ['nappy', 'Nappy'], ['sleep', live.sleep ? 'End sleep' : 'Sleep'], ['more', 'More']];
     return '<div class="b-acts">' + A.map(function (a) {
       return '<button class="b-act' + (live[a[0]] ? ' on' : '') + '" data-t="' + a[0] + '" data-b="' + a[0] + '">' + bIcon(a[0]) + '<span>' + a[1] + '</span></button>';
     }).join('') + '</div>';
@@ -4361,9 +4412,18 @@ button,[role=button],a,label{touch-action:manipulation}
     return false;
   }
 
+  // Finish on a running bottle: ask how many mL, then save it (the same pattern as the pump sheet).
+  function bBottleFinishSheet(e) {
+    Baby.bt = { id: e.id, ml: bottleDefaults().ml, kind: bottleDefaults().kind };
+    bOpenSheet('<h3>Bottle finished</h3><p class="b-hint">' + pdur(Date.now() - e.start) + ' from ' + bAt(e.start) + '. How many mL did they have?</p>' +
+      '<div class="b-step"><button class="b-sq" data-b="ml" data-v="-10" aria-label="Less">&minus;</button><div class="b-val" id="bMl"></div>' +
+      '<button class="b-sq" data-b="ml" data-v="10" aria-label="More">+</button></div>' +
+      '<div class="b-chips"><button class="b-chip" data-b="kind" data-v="expressed">Expressed</button><button class="b-chip" data-b="kind" data-v="formula">Formula</button></div>' +
+      '<div class="b-row"><button class="b-btn g" data-b="cancel">Back</button><button class="b-btn p" data-b="bottle-finish">Save bottle</button></div>');
+    bBottlePaint();
+  }
   function bBottleSheet(when) {
-    var last = pipLast('bottle');
-    Baby.bt = { ml: last && last.ml > 0 ? Math.min(400, last.ml) : 60, kind: last && last.kind === 'formula' ? 'formula' : 'expressed' };
+    Baby.bt = bottleDefaults();
     bOpenSheet('<h3>Bottle</h3><div class="b-step"><button class="b-sq" data-b="ml" data-v="-10" aria-label="Less">&minus;</button><div class="b-val" id="bMl"></div>' +
       '<button class="b-sq" data-b="ml" data-v="10" aria-label="More">+</button></div>' +
       '<div class="b-chips"><button class="b-chip" data-b="kind" data-v="expressed">Expressed</button><button class="b-chip" data-b="kind" data-v="formula">Formula</button></div>' +
@@ -4455,6 +4515,7 @@ button,[role=button],a,label{touch-action:manipulation}
     var e0 = pip.entries[id];
     if (!e0 || e0.deleted || !e0.running) return;
     if (e0.type === 'pump') { bPumpSheet(e0); return; }
+    if (e0.type === 'bottle') { bBottleFinishSheet(e0); return; }
     fresh(function () {
       var e = pip.entries[id], now = Date.now();
       if (!e || e.deleted || !e.running) return;
@@ -4657,7 +4718,7 @@ button,[role=button],a,label{touch-action:manipulation}
         if (!bReady()) break;
         if (pipLive('breast')) toast('A feed is already running', false); else startBreast(nextSideNow(), true);
         break;
-      case 'bottle': if (bReady()) bBottleSheet(); break;
+      case 'bottle': { if (!bReady()) break; var bl = pipLive('bottle'); if (bl) bFinish(bl.id); else startBottle(true); break; }
       case 'nappy': if (bReady()) bNappySheet(); break;
       case 'more': if (bReady()) bMoreSheet(); break;
       case 'sleep': if (bReady()) toggleSleep(); break;
@@ -4699,6 +4760,14 @@ button,[role=button],a,label{touch-action:manipulation}
       case 'cancel': bCloseSheet(); break;
       case 'ml': if (bt) { bt.ml = clamp(bt.ml + (+v), 0, 400); bBottlePaint(); } break;
       case 'kind': if (bt) { bt.kind = v; bBottlePaint(); } break;
+      case 'bottle-finish':
+        if (!bt || !bt.id || !bReady()) break;
+        (function () {
+          var id = bt.id, ml = bt.ml, kind = bt.kind;
+          bCloseSheet();
+          finishBottle(id, ml, kind);
+        })();
+        break;
       case 'bottle-save':
         if (!bt || !bReady()) break;
         (function () {
